@@ -72,16 +72,6 @@
     ctx.fillStyle = '#f2ead2';
     R.font(ctx, 30, true);
     ctx.fillText(String(A.storageGet('zy_coin') || 0), 270, 71);
-    // 体力胶囊
-    ctx.fillStyle = 'rgba(50,40,28,0.85)';
-    R.roundRect(ctx, 140, 110, 240, 48, 24);
-    ctx.fill();
-    ctx.fillStyle = '#e8c53a';
-    R.font(ctx, 30, true);
-    ctx.fillText('⚡', 168, 135);
-    ctx.fillStyle = '#f2ead2';
-    R.font(ctx, 28, true);
-    ctx.fillText('30 / 30', 268, 135);
     ctx.restore();
 
     // 标题
