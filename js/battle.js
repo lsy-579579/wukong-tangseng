@@ -15,7 +15,7 @@
 
   function auraMul(S) {
     for (var k in S.units) {
-      if (S.units[k].kind === 'g' && S.units[k].name === '刘备') return 1.2;
+      if (S.units[k].kind === 'g' && S.units[k].name === '白龙') return 1.2;
     }
     return 1;
   }
