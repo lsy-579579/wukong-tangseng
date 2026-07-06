@@ -87,12 +87,11 @@
     // 段位
     R.font(ctx, 34, true);
     ctx.fillStyle = '#3a3126';
-    var best = parseInt(A.storageGet('zy_best') || '0', 10);
-    var rank = Math.min(5, 1 + Math.floor(best / 3));
-    ctx.fillText('军士.' + '一二三四五'[rank - 1], DW / 2, DH * 0.20 + 78);
+    var prog = ZY.Rank.load();
+    ctx.fillText(prog.rankName, DW / 2, DH * 0.20 + 78);
     // 星级
-    for (var i = 0; i < 5; i++) {
-      R.star(ctx, DW / 2 - 128 + i * 64, DH * 0.20 + 140, 26, i < rank);
+    for (var i = 0; i < C.STARS_PER_RANK; i++) {
+      R.star(ctx, DW / 2 - 128 + i * 64, DH * 0.20 + 140, 26, i < prog.stars);
     }
     ctx.restore();
 
@@ -158,12 +157,13 @@
     ctx.fillText('⚔', 0, 0);
     ctx.restore();
 
-    if (best > 0) {
+    var bestWave = parseInt(A.storageGet('zy_best') || '0', 10);
+    if (bestWave > 0) {
       ctx.save();
       R.font(ctx, 26, false);
       ctx.fillStyle = '#6a5c42';
       ctx.textAlign = 'center';
-      ctx.fillText('最佳战绩：第 ' + best + ' 波', DW / 2, DH * 0.68 + 150);
+      ctx.fillText('最佳战绩：第 ' + bestWave + ' 波', DW / 2, DH * 0.68 + 150);
       ctx.restore();
     }
     drawToasts(ctx);
@@ -304,13 +304,22 @@
     ctx.textBaseline = 'middle';
     ctx.fillText(win ? '胜利' : '失败', DW / 2, DH * 0.16);
 
-    // 卷轴 + 星级
+    // 卷轴 + 段位星级
     R.scroll(ctx, DW / 2, DH * 0.32, 400, 110);
+    var prog = ZY.Rank.load();
     R.font(ctx, 30, true);
     ctx.fillStyle = '#e8dfc8';
-    ctx.fillText('军士.一', DW / 2, DH * 0.32 - 26);
-    for (var i = 0; i < 5; i++) {
-      R.star(ctx, DW / 2 - 128 + i * 64, DH * 0.32 + 18, 24, i < (win ? G.p.hearts + 2 : 1));
+    ctx.fillText(prog.rankName + (prog.rank === C.RANKS.length - 1 ? '' : ' · ' + prog.stars + '/' + C.STARS_PER_RANK), DW / 2, DH * 0.32 - 26);
+    var starShow = prog.stars;
+    if (win) starShow = Math.min(C.STARS_PER_RANK, starShow + 1); // 本场通关后即将得到的星
+    for (var i = 0; i < C.STARS_PER_RANK; i++) {
+      R.star(ctx, DW / 2 - 128 + i * 64, DH * 0.32 + 18, 24, i < starShow);
+    }
+    // 晋升提示
+    if (win && G.rankPromote && G.rankPromote.promoted) {
+      ctx.fillStyle = '#e8c53a';
+      R.font(ctx, 28, true);
+      ctx.fillText('晋升！' + G.rankPromote.newRankName, DW / 2, DH * 0.32 + 56);
     }
 
     // 阿斗与贼群

@@ -72,8 +72,13 @@
     G.scene = 'over';
     G.win = win;
     G.coinReward = (win ? 10 : 3) + G.wave;
-    var best = parseInt(A.storageGet('zy_best') || '0', 10);
-    if (G.wave > best) A.storageSet('zy_best', String(G.wave));
+    G.rankPromote = null;
+    if (win) {
+      var p = ZY.Rank.promoteOnWin();
+      G.rankPromote = p;
+      var best = parseInt(A.storageGet('zy_best') || '0', 10);
+      if (G.wave > best) A.storageSet('zy_best', String(G.wave));
+    }
     var coin = parseInt(A.storageGet('zy_coin') || '0', 10);
     A.storageSet('zy_coin', String(coin + G.coinReward));
     ZY.sfx(win ? 'win' : 'lose');
