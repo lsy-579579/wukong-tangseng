@@ -106,7 +106,6 @@
         } else {
           R.tileGreen(ctx, x, y, L.cell, seed);
           if (t === 'build_p' || t === 'build_e') R.tileWhite(ctx, x, y, L.cell);
-          if (t === 'unlockable_p' || t === 'unlockable_e') R.tileUnlockable(ctx, x, y, L.cell);
         }
       }
     }

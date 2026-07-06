@@ -306,23 +306,25 @@
     var d = drag;
     drag = null;
 
+    // 与拖拽幽灵显示位置一致（幽灵画在 y-40），放置判定也用 y-40
+    var py = y - 40;
     var bi = benchSlotAt(x, y);
-    var cell = Map.buildCellAt(x, y, 'p') || Map.cellAt(x, y);
+    var cell = Map.buildCellAt(x, py, 'p') || Map.cellAt(x, py);
     var ck = cell ? key(cell.c, cell.r) : null;
     var isBuild = ck && Map.cellType[ck] === 'build_p';
 
-    // 铲子特殊处理：拖到 unlockable_p 格解锁，否则返回备战席
+    // 判断单位是否为武将半身（锁定，不可交换/拖动到异地）
+    function isLockedHalf(u) { return u && u.kind === 'g' && u.half != null; }
+
+    // 铲子特殊处理：拖到任意可铲 block 格解锁，否则返回原位
     if (d.unit.kind === 'shovel') {
-      var cellAny = Map.cellAt(x, y);
-      if (cellAny) {
-        var uk = key(cellAny.c, cellAny.r);
-        if (Map.cellType[uk] === 'unlockable_p') {
-          if (B.useShovel(S, cellAny.c, cellAny.r)) {
-            // 消耗铲子
-            if (d.from.type === 'bench') S.bench[d.from.idx] = null;
-            else delete S.units[d.from.key];
-            return true;
-          }
+      var cellAny = Map.cellAt(x, py) || Map.cellAt(x, y);
+      if (cellAny && Map.isUnlockable(cellAny.c, cellAny.r, 'p')) {
+        if (B.useShovel(S, cellAny.c, cellAny.r)) {
+          // 消耗铲子
+          if (d.from.type === 'bench') S.bench[d.from.idx] = null;
+          else delete S.units[d.from.key];
+          return true;
         }
       }
       // 铲子不能放在普通建造格，返回原位
@@ -355,15 +357,20 @@
           ZY.sfx('click');
           return true;
         }
-        // 目标格有单位：仅兵种可二合一升级
+        // 目标格有单位：兵种可二合一升级
         var merged = B.tryMerge(d.unit, target);
         if (merged) {
           S.units[ck] = merged;
           S.bench[d.from.idx] = null;
           var p = Map.cellCenter(cell.c, cell.r);
           afterMerge(S, merged, p.x, p.y, true);
+          return true;
         }
-        // 合并不成功：单位留在备战席原位（不交换、不丢失）
+        // 合并不成功：任意两元素交换位置（武将半身锁定除外）
+        if (!isLockedHalf(d.unit) && !isLockedHalf(target)) {
+          S.units[ck] = d.unit;
+          S.bench[d.from.idx] = target;
+        }
         return true;
       }
       // 拖到非建造区：单位留在备战席
@@ -374,13 +381,13 @@
     // 拖到备战席
     if (bi >= 0) {
       // 武将半身拖到备战席：另一半变回碎片，半身本身变回碎片
-      if (d.unit.kind === 'g' && d.unit.half != null) {
+      if (isLockedHalf(d.unit)) {
         unlinkGeneral(S, d.from.key);
         S.bench[bi] = B.makeFrag(d.unit.ch);
         delete S.units[d.from.key];
         return true;
       }
-      // 普通单位/碎片拖到空备战席
+      // 备战席为空：直接放入
       if (!S.bench[bi]) { S.bench[bi] = d.unit; delete S.units[d.from.key]; return true; }
       // 备战席有单位：尝试兵种合成
       var m2 = B.tryMerge(d.unit, S.bench[bi]);
@@ -389,6 +396,13 @@
         delete S.units[d.from.key];
         var bp = B.benchSlotCenter(bi);
         afterMerge(S, m2, bp.x, bp.y, true);
+        return true;
+      }
+      // 合并不成功：任意两元素交换位置
+      if (!isLockedHalf(S.bench[bi])) {
+        var tmpB = S.bench[bi];
+        S.bench[bi] = d.unit;
+        S.units[d.from.key] = tmpB;
       }
       return true;
     }
@@ -396,7 +410,7 @@
     if (isBuild && ck !== d.from.key) {
       var t2 = S.units[ck];
       // 武将半身拖动：禁止（锁定），返回原位
-      if (d.unit.kind === 'g' && d.unit.half != null) {
+      if (isLockedHalf(d.unit)) {
         return true; // 不做任何变动
       }
       // 目标格为空：移动（若是碎片，尝试相邻合成武将）
@@ -414,8 +428,8 @@
       if (B.mergeOnBoard(S, 'p', d.from.key, ck)) {
         return true;
       }
-      // 合并不成功：尝试交换（仅非武将单位）
-      if (t2.kind !== 'g' || t2.half == null) {
+      // 合并不成功：任意两元素交换位置（目标武将半身锁定除外）
+      if (!isLockedHalf(t2)) {
         S.units[d.from.key] = t2;
         S.units[ck] = d.unit;
       }

@@ -835,32 +835,7 @@
     ctx.restore();
   };
 
-  // 可解锁格（铲子目标）：灰色虚线 + 土块纹理，提示可挖
-  R.tileUnlockable = function (ctx, x, y, s) {
-    ctx.save();
-    // 暗绿/灰底
-    ctx.fillStyle = 'rgba(120,110,90,0.35)';
-    ctx.fillRect(x + 2, y + 2, s - 4, s - 4);
-    // 虚线边框（可挖提示）
-    ctx.strokeStyle = 'rgba(90,70,40,0.7)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 4]);
-    ctx.strokeRect(x + 3, y + 3, s - 6, s - 6);
-    ctx.setLineDash([]);
-    // 中央土块小图标
-    ctx.fillStyle = 'rgba(110,80,45,0.55)';
-    ctx.beginPath();
-    ctx.arc(x + s / 2, y + s / 2, s * 0.16, 0, Math.PI * 2);
-    ctx.fill();
-    // 小铲子图案（提示可用铲子）
-    ctx.strokeStyle = 'rgba(80,55,25,0.6)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.42, y + s * 0.58);
-    ctx.lineTo(x + s * 0.58, y + s * 0.42);
-    ctx.stroke();
-    ctx.restore();
-  };
+  // 可解锁格已无特殊样式：所有绿色 block 格都可铲，渲染同普通绿格
 
   // 铲子道具牌（与字牌同尺寸，棕色土底 + 铲子图案 + "铲"字）
   R.shovelTile = function (ctx, x, y, s, opt) {

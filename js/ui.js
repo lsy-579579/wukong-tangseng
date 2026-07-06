@@ -260,19 +260,19 @@
 
     drawToasts(ctx);
 
-    // 拖拽幽灵
+    // 拖拽幽灵（画在 y-40，放置判定也用 y-40，保持一致）
     var d = ZY.Board.dragging();
     if (d) {
       ZY.Board.drawUnit(ctx, d.unit, d.x, d.y - 40, L.cell + 10, 0.92);
-      // 拖铲子时高亮所有 unlockable_p 格
+      // 拖铲子时高亮所有可铲 block 格（玩家侧所有绿格）
       if (d.unit.kind === 'shovel') {
         for (var uc = 0; uc < ZY.Map.COLS; uc++) {
           for (var ur = 0; ur < ZY.Map.ROWS; ur++) {
-            if (ZY.Map.cellType[uc + '_' + ur] === 'unlockable_p') {
+            if (ZY.Map.isUnlockable(uc, ur, 'p')) {
               var upc = ZY.Map.cellCenter(uc, ur);
               ctx.save();
               ctx.strokeStyle = '#c9922e';
-              ctx.lineWidth = 4;
+              ctx.lineWidth = 3;
               ctx.setLineDash([6, 4]);
               R.roundRect(ctx, upc.x - L.cell / 2 + 2, upc.y - L.cell / 2 + 2, L.cell - 4, L.cell - 4, 8);
               ctx.stroke();
@@ -282,21 +282,20 @@
           }
         }
       } else {
-        // 普通单位：高亮可放置格
-        var cell = ZY.Map.cellAt(d.x, d.y - 40) || ZY.Map.cellAt(d.x, d.y);
+        // 普通单位：高亮可放置格（用 buildCellAt 与放置判定一致）
+        var cell = ZY.Map.buildCellAt(d.x, d.y - 40, 'p');
         if (cell) {
           var k = cell.c + '_' + cell.r;
-          if (ZY.Map.cellType[k] === 'build_p') {
-            var t = G.p.units[k];
-            var ok = !t || ZY.Board.tryMerge(d.unit, t);
-            var pc = ZY.Map.cellCenter(cell.c, cell.r);
-            ctx.save();
-            ctx.strokeStyle = ok ? '#c9922e' : 'rgba(160,60,40,0.8)';
-            ctx.lineWidth = 4;
-            R.roundRect(ctx, pc.x - L.cell / 2 + 2, pc.y - L.cell / 2 + 2, L.cell - 4, L.cell - 4, 8);
-            ctx.stroke();
-            ctx.restore();
-          }
+          var t = G.p.units[k];
+          // 空格或可合成或可交换 → 金色；武将半身目标不可放 → 红色
+          var ok = !t || ZY.Board.tryMerge(d.unit, t) || !(t.kind === 'g' && t.half != null);
+          var pc = ZY.Map.cellCenter(cell.c, cell.r);
+          ctx.save();
+          ctx.strokeStyle = ok ? '#c9922e' : 'rgba(160,60,40,0.8)';
+          ctx.lineWidth = 4;
+          R.roundRect(ctx, pc.x - L.cell / 2 + 2, pc.y - L.cell / 2 + 2, L.cell - 4, L.cell - 4, 8);
+          ctx.stroke();
+          ctx.restore();
         }
       }
     }

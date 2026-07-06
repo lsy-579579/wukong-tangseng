@@ -34,9 +34,7 @@
   M.spawnOf = function (side) { return M.pathOf(side)[0]; };
   M.adouOf = function (side) { return M.pathOf(side)[M.pathOf(side).length - 1]; };
 
-  M.cellType = {}; // key -> 'path' | 'build_p' | 'build_e' | 'block' | 'unlockable_p' | 'unlockable_e'
-  // 可解锁格集合（玩家侧 + 对手侧）
-  M.unlockable = {}; // key -> true（可解锁但未解锁）
+  M.cellType = {}; // key -> 'path' | 'build_p' | 'build_e' | 'block'
   function markAll() {
     for (var c = 0; c < M.COLS; c++)
       for (var r = 0; r < M.ROWS; r++)
@@ -44,46 +42,28 @@
     P_PATH.concat(E_PATH).forEach(function (p) { M.cellType[key(p[0], p[1])] = 'path'; });
     P_BUILD.forEach(function (p) { M.cellType[key(p[0], p[1])] = 'build_p'; });
     E_BUILD.forEach(function (p) { M.cellType[key(p[0], p[1])] = 'build_e'; });
-    // 可解锁格（铲子目标）
-    if (ZY.C && ZY.C.SHOVEL_UNLOCK_P) {
-      ZY.C.SHOVEL_UNLOCK_P.forEach(function (p) {
-        var k = key(p[0], p[1]);
-        if (M.cellType[k] === 'block') {
-          M.cellType[k] = 'unlockable_p';
-          M.unlockable[k] = true;
-        }
-      });
-      // 对手侧镜像（暂不使用，AI 不会用铲子）
-      ZY.C.SHOVEL_UNLOCK_P.forEach(function (p) {
-        var ek = key(M.COLS - 1 - p[0], M.ROWS - 1 - p[1]);
-        if (M.cellType[ek] === 'block') {
-          M.cellType[ek] = 'unlockable_e';
-        }
-      });
-    }
   }
   // 注意：markAll 在 config.js 加载后才执行，这里先注册一个延迟初始化
   M.ensureMarked = function () { if (!M._marked) { markAll(); M._marked = true; } };
 
-  // 每局重置：重新标记所有格子（已解锁的 build_p 会变回 unlockable_p）
+  // 每局重置：重新标记所有格子（已铲开的 build_p 会变回 block）
   M.resetUnlockable = function () {
     M._marked = false;
-    M.unlockable = {};
     markAll();
     M._marked = true;
   };
 
-  // 铲子解锁：将 unlockable_p 格转为 build_p
+  // 铲子解锁：将任意 block 格转为 build_<side>（所有绿色空地都可铲）
   M.unlockCell = function (c, r, side) {
     var k = key(c, r);
-    var target = 'unlockable_' + side;
-    if (M.cellType[k] !== target) return false;
+    if (M.cellType[k] !== 'block') return false;
     M.cellType[k] = 'build_' + side;
-    delete M.unlockable[k];
     return true;
   };
+  // 是否可铲：block 格且在指定阵营半场（玩家下半场 / 对手上半场）
   M.isUnlockable = function (c, r, side) {
-    return M.cellType[key(c, r)] === 'unlockable_' + side;
+    if (M.cellType[key(c, r)] !== 'block') return false;
+    return side === 'p' ? r >= M.ROWS / 2 : r < M.ROWS / 2;
   };
 
   // 像素坐标换算（依赖 ZY.L 布局，在 main.js 计算后可用）
@@ -104,15 +84,18 @@
     return { c: c, r: r };
   };
 
-  // 带容差的建造格判定：返回最近的 build 格（在判定半径内）
+  // 带容差的建造格判定：返回最近的 build 格（放宽容差，避免"放到位了还判定返回"）
   M.buildCellAt = function (x, y, side) {
     var L = ZY.L;
     var c = Math.floor((x - L.mapX) / L.cell);
     var r = Math.floor((y - L.mapY) / L.cell);
-    // 优先检查当前格
-    var candidates = [[c,r],[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
+    // 检查当前格 + 8 邻域，找最近的 build 格
+    var candidates = [
+      [c,r],[c-1,r],[c+1,r],[c,r-1],[c,r+1],
+      [c-1,r-1],[c+1,r-1],[c-1,r+1],[c+1,r+1]
+    ];
     var best = null, bestDist = Infinity;
-    var tolerance = L.cell * 0.45; // 容差半径
+    var tolerance = L.cell * 0.7; // 宽松容差半径
     for (var i = 0; i < candidates.length; i++) {
       var cc = candidates[i][0], rr = candidates[i][1];
       var k = cc + '_' + rr;
