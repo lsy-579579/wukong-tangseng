@@ -125,41 +125,46 @@
       ctx.stroke();
     }
     ctx.restore();
-    // 僧字牌（替代阿斗）：呼吸跳动 + 水墨晕 + 金箍 + 红心
-    R.monk(ctx, DW / 2, by - 26, 92, 3, 3, false, t);
-    // 金箍棒斜插 + 悟空题字（替代长枪+赵云）
+    // 僧字（替代阿斗）：无框 + 扭动 + 金箍 + 红心
+    var monkX = DW / 2, monkY = by - 26, monkS = 92;
+    R.monk(ctx, monkX, monkY, monkS, 3, 3, false, t);
+    // 金箍棒斜插，棒头戳到僧字右上方
     ctx.save();
-    // 金箍棒棒身（金色渐变）
+    var staffTopX = monkX + 80, staffTopY = monkY - 36; // 棒头戳向僧字右上
+    var staffBotX = monkX - 80, staffBotY = monkY + 130; // 棒尾斜插向下
+    // 金箍棒棒身（金色）
     ctx.strokeStyle = '#d4a017';
     ctx.lineWidth = 8;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(DW / 2 + 26, by - 96);
-    ctx.lineTo(DW / 2 - 60, by + 108);
+    ctx.moveTo(staffTopX, staffTopY);
+    ctx.lineTo(staffBotX, staffBotY);
     ctx.stroke();
     // 棒身花纹
     ctx.strokeStyle = '#8a6a10';
     ctx.lineWidth = 2;
     for (var bi = 0; bi < 6; bi++) {
       var ratio = bi / 5;
-      var bx1 = DW / 2 + 26 + (DW / 2 - 60 - (DW / 2 + 26)) * ratio;
-      var by1 = by - 96 + (by + 108 - (by - 96)) * ratio;
+      var bx1 = staffTopX + (staffBotX - staffTopX) * ratio;
+      var by1 = staffTopY + (staffBotY - staffTopY) * ratio;
       ctx.beginPath();
       ctx.arc(bx1, by1, 5, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // 金箍棒两端（金箍）
+    // 金箍棒两端（金箍球）
     ctx.fillStyle = '#e8c53a';
     ctx.strokeStyle = '#8a6a10';
     ctx.lineWidth = 2;
+    // 棒头（戳向僧字的一端，较大）
     ctx.beginPath();
-    ctx.arc(DW / 2 + 26, by - 96, 10, 0, Math.PI * 2);
+    ctx.arc(staffTopX, staffTopY, 11, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
+    // 棒尾
     ctx.beginPath();
-    ctx.arc(DW / 2 - 60, by + 108, 10, 0, Math.PI * 2);
+    ctx.arc(staffBotX, staffBotY, 9, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 悟空题字（呼吸跳动的水墨字牌）
-    R.livingTile(ctx, DW / 2 - 110, by + 96, 78, '悟空', 'general', t);
+    // 悟空题字（跳动金字牌，放在左下）
+    R.livingTile(ctx, monkX - 130, monkY + 96, 78, '悟空', 'general', t);
     ctx.restore();
 
     // 开始按钮

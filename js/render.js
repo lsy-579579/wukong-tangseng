@@ -386,7 +386,7 @@
     ctx.restore();
   };
 
-  // 僧（替代阿斗）：跳动的"僧"字方块 + 头顶金箍 + 红心
+  // 僧（替代阿斗）：无框"僧"字 + 头顶金箍 + 红心 + 扭动动画
   R.monk = function (ctx, x, y, s, hearts, maxHearts, shake, t) {
     ctx.save();
     if (shake) ctx.translate((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 4);
@@ -394,11 +394,27 @@
     for (var i = 0; i < maxHearts; i++) {
       R.heart(ctx, x - (maxHearts - 1) * s * 0.19 + i * s * 0.38, y - s * 0.82, s * 0.3, i < hearts);
     }
-    // 跳动的僧字方块
-    R.livingTile(ctx, x, y, s, '僧', 'monk', t);
-    // 金箍（替代金冠）
-    R.goldRing(ctx, x, y - s * 0.52, s * 0.5, t);
+    // 无框僧字：扭动 + 小幅跳动（参考原版"一扭一扭"效果）
+    var period = 0.8;
+    var phase = (t % period) / period;
+    // 扭动：左右旋转摆动（主体动效）
+    var twist = Math.sin(phase * Math.PI * 2) * 0.18; // ±10° 扭动
+    // 小幅跳动
+    var bob = -Math.abs(Math.sin(phase * Math.PI)) * s * 0.04;
+    ctx.translate(x, y + bob);
+    ctx.rotate(twist);
+    // 僧字阴影（轻微）
+    ctx.fillStyle = 'rgba(60,50,40,0.2)';
+    R.font(ctx, s * 0.7, true);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('僧', 2, s * 0.04 + 2);
+    // 僧字主体（深棕色）
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillText('僧', 0, s * 0.02);
     ctx.restore();
+    // 金箍（替代金冠，跟随扭动需在外层 save 之外画）
+    R.goldRing(ctx, x, y - s * 0.52 + (shake ? 0 : 0), s * 0.5, t);
   };
 
   // 金箍（孙悟空头上的紧箍咒，带光泽）
