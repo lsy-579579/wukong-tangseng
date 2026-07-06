@@ -255,7 +255,7 @@
       x: DW / 2 - 140, y: L.btnY, w: 280, h: 96,
       label: '征兵', fs: 40, bun: ZY.Board.recruitCost(G.p)
     };
-    rb.disabled = G.p.mantou < rb.bun || G.p.bench.indexOf(null) < 0 || (G.recruitDraw && G.recruitDraw.length > 0);
+    rb.disabled = G.p.mantou < rb.bun;
     R.redButton(ctx, rb);
 
     drawToasts(ctx);
@@ -299,14 +299,6 @@
           }
         }
       }
-    }
-
-    // 征兵卡牌选择面板（最上层）
-    if (G.recruitDraw && G.recruitDraw.length) {
-      var ft = ZY.frameTime ? ZY.frameTime() : 0;
-      UI.cardHits = R.cardPanel(ctx, G.recruitDraw, DW / 2, A.DH / 2, ft);
-    } else {
-      UI.cardHits = null;
     }
   };
 

@@ -99,38 +99,20 @@
     return B.makeSoldier(C.SOLDIER_CHARS[0], 1);
   }
 
-  // 征兵：抽 5 张卡牌供玩家选择（原版机制）
-  // 返回卡牌数组，由 UI 层展示供玩家选择
+  // 征兵：原版机制——直接替换整个备战席为5张随机卡牌
+  // （士兵/碎片/铲子按权重抽取，原备战席内容被替换）
   B.recruit = function (S, sideIsPlayer) {
     var cost = B.recruitCost(S);
     if (S.mantou < cost) {
       if (sideIsPlayer) ZY.UI.toast('馒头不足');
       return false;
     }
-    // 备战席是否还有空位（如果完全满了仍允许抽卡，但选择时需提示）
     S.mantou -= cost;
     S.recruitCount++;
-    // 抽 5 张卡牌
-    var cards = [];
-    for (var i = 0; i < C.RECRUIT_DRAW_COUNT; i++) {
-      cards.push(rollOneCard(S));
+    for (var i = 0; i < C.ECON.benchSize; i++) {
+      S.bench[i] = rollOneCard(S);
     }
     if (sideIsPlayer) ZY.sfx('coin');
-    return cards; // 返回卡牌数组，由调用方处理选择
-  };
-
-  // 玩家从抽卡面板选择一张卡牌放入备战席指定位置
-  // cardIdx: 选中的卡牌索引；返回 true 表示成功放入
-  B.pickCard = function (S, cards, cardIdx) {
-    var slot = S.bench.indexOf(null);
-    if (slot < 0) {
-      ZY.UI.toast('备战席已满');
-      return false;
-    }
-    var card = cards[cardIdx];
-    if (!card) return false;
-    S.bench[slot] = card;
-    cards.splice(cardIdx, 1); // 从卡牌池移除
     return true;
   };
 

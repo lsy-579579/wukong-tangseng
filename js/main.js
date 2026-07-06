@@ -49,9 +49,7 @@
       coinReward: 0,
       p: ZY.Board.newSide(),
       e: ZY.Board.newSide(),
-      win: false,
-      recruitDraw: null, // 当前征兵抽卡面板（5张卡牌）
-      shovelMode: false  // 铲子使用模式（true=下一步点击格解锁）
+      win: false
     };
     ZY.Board.reset();
     ZY.Enemies.reset();
@@ -182,30 +180,9 @@
       if (R.inside(ub.resume, x, y)) { ZY.sfx('click'); G.scene = 'play'; }
       return;
     }
-    // 征兵卡牌选择面板优先处理（模态覆盖层）
-    if (G.recruitDraw && G.recruitDraw.length) {
-      var hits = ZY.UI.cardHits || [];
-      for (var i = 0; i < hits.length; i++) {
-        var h = hits[i];
-        if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) {
-          ZY.sfx('click');
-          ZY.Board.pickCard(G.p, G.recruitDraw, h.idx);
-          G.recruitDraw = null; // 选完一张即关闭面板
-          return;
-        }
-      }
-      // 点击面板外：关闭面板（其余卡牌作废，馒头已扣除）
-      G.recruitDraw = null;
-      return;
-    }
     if (R.inside(ub.pause, x, y)) { ZY.sfx('click'); G.scene = 'pause'; return; }
     if (R.inside(ub.sound, x, y)) { ZY.sfxToggle(); return; }
-    if (ub.recruit && R.inside(ub.recruit, x, y)) {
-      ZY.sfx('click');
-      var cards = ZY.Board.recruit(G.p, true);
-      if (cards) G.recruitDraw = cards;
-      return;
-    }
+    if (ub.recruit && R.inside(ub.recruit, x, y)) { ZY.sfx('click'); ZY.Board.recruit(G.p, true); return; }
     ZY.Board.onDown(x, y);
   }
 
