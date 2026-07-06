@@ -92,8 +92,8 @@
     ctx.textBaseline = 'middle';
     ctx.strokeStyle = 'rgba(60,20,10,0.35)';
     ctx.lineWidth = 3;
-    ctx.fillText('赵云与阿斗', DW / 2, DH * 0.20);
-    ctx.strokeText('赵云与阿斗', DW / 2, DH * 0.20);
+    ctx.fillText('悟空与唐僧', DW / 2, DH * 0.20);
+    ctx.strokeText('悟空与唐僧', DW / 2, DH * 0.20);
     // 段位
     R.font(ctx, 34, true);
     ctx.fillStyle = '#3a3126';
