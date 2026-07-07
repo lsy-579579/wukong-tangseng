@@ -100,9 +100,15 @@
     }
 
     // 5. 征兵（原版机制：替换整个备战席为5张新卡）
-    // AI 仅在备战席为空时征兵，避免浪费已有单位
-    var allEmpty = S.bench.every(function (x) { return !x; });
-    if (allEmpty && S.mantou >= B().recruitCost(S)) {
+    // 修复死锁：原条件「备战席全空」几乎永不成立（碎片会留守）。
+    // 新条件：席上无可用士兵/武将（只剩碎片/铲子/空位）且馒头足够时即征兵，
+    // 让 AI 能持续补充战力、对局进入后期。
+    var hasPlayable = false;
+    for (var bi = 0; bi < S.bench.length; bi++) {
+      var bu = S.bench[bi];
+      if (bu && (bu.kind === 's' || bu.kind === 'g')) { hasPlayable = true; break; }
+    }
+    if (!hasPlayable && S.mantou >= B().recruitCost(S)) {
       return B().recruit(S, false, curDiff.luck);
     }
     return false;

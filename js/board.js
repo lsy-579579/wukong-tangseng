@@ -80,8 +80,8 @@
   B.rollCard = function (S, luck) {
     luck = Math.max(0, Math.min(1, luck || 0));
     // 运气影响权重：铲子减少、碎片略增
-    var wShovel = 8 * (1 - luck * 0.75);     // 8 → 2
-    var wFrag = 22 + luck * 6;               // 22 → 28
+    var wShovel = 4 * (1 - luck * 0.75);     // 4 → 1
+    var wFrag = 26 + luck * 6;               // 26 → 32
     var wSoldier = 70;
     var totalW = wShovel + wFrag + wSoldier;
     var roll = Math.random() * totalW;
@@ -102,7 +102,7 @@
       var pair = C.FRAG_MAP[oc][1];
       if (!own[pair]) wants.push(pair);
     }
-    var pairChance = 0.65 + luck * 0.30; // 0.65 → 0.95
+    var pairChance = 0.75 + luck * 0.20; // 0.75 → 0.95
     var fc = (wants.length && Math.random() < pairChance)
       ? wants[(Math.random() * wants.length) | 0]
       : C.FRAG_CHARS[(Math.random() * C.FRAG_CHARS.length) | 0];
