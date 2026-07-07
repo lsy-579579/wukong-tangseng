@@ -369,8 +369,6 @@
     var S = G.p;
     var bi = benchSlotAt(x, y);
     if (bi >= 0 && S.bench[bi]) {
-      // 武将半身不可从备战席拾取（理论上备战席不会有半身，保险起见）
-      if (S.bench[bi].kind === 'g' && S.bench[bi].half != null) return false;
       drag = { from: { type: 'bench', idx: bi }, unit: S.bench[bi], x: x, y: y };
       return true;
     }
@@ -378,9 +376,15 @@
     if (cell) {
       var k = key(cell.c, cell.r);
       if (Map.cellType[k] === 'build_p' && S.units[k]) {
-        // 武将半身禁止拾取拖动（锁定，只能就地升级或拆除）
-        if (S.units[k].kind === 'g' && S.units[k].half != null) return false;
-        drag = { from: { type: 'cell', key: k }, unit: S.units[k], x: x, y: y };
+        var u = S.units[k];
+        var d = { from: { type: 'cell', key: k }, unit: u, x: x, y: y };
+        // 武将半身：记录配对信息，拖动时整体移动
+        if (u.kind === 'g' && u.half != null && u.pairedKey && S.units[u.pairedKey]) {
+          d.isHalf = true;
+          d.pairUnit = S.units[u.pairedKey];
+          d.pairKey = u.pairedKey;
+        }
+        drag = d;
         return true;
       }
     }
@@ -407,8 +411,9 @@
     var ck = cell ? key(cell.c, cell.r) : null;
     var isBuild = ck && Map.cellType[ck] === 'build_p';
 
-    // 判断单位是否为武将半身（锁定，不可交换/拖动到异地）
+    // 判断单位是否为武将半身（用于锁定检测，保留以备扩展）
     function isLockedHalf(u) { return u && u.kind === 'g' && u.half != null; }
+    void isLockedHalf;
 
     // 铲子特殊处理：拖到任意可铲 block 格解锁，否则返回原位
     if (d.unit.kind === 'shovel') {
@@ -507,15 +512,76 @@
     }
 
     // 从格子拖出
-    // 拖到备战席
-    if (bi >= 0) {
-      // 武将半身拖到备战席：另一半变回碎片，半身本身变回碎片
-      if (isLockedHalf(d.unit)) {
-        unlinkGeneral(S, d.from.key);
-        S.bench[bi] = B.makeFrag(d.unit.ch);
-        delete S.units[d.from.key];
+    // 武将半身特殊处理：整体移动（两字一起搬），不拆分不交换
+    if (d.isHalf) {
+      // 拖到备战席：两字拆成碎片放入（需两个空位）
+      if (bi >= 0) {
+        var otherBi = -1;
+        for (var ob = 0; ob < C.ECON.benchSize; ob++) {
+          if (ob !== bi && !S.bench[ob]) { otherBi = ob; break; }
+        }
+        if (otherBi >= 0) {
+          S.bench[bi] = B.makeFrag(d.unit.ch);
+          S.bench[otherBi] = B.makeFrag(d.pairUnit.ch);
+          delete S.units[d.from.key];
+          delete S.units[d.pairKey];
+        }
         return true;
       }
+      // 拖到建造格：整体移动到 ck + 相邻空格
+      if (isBuild) {
+        var t2h = S.units[ck];
+        // 目标格为空：找相邻空格放另一半
+        if (!t2h) {
+          var pcr = ck.split('_');
+          var pairNk = findAdjEmptyBuild(S, 'p', +pcr[0], +pcr[1]);
+          // 排除来源格（来源格即将被清空，可作为另一半落点）
+          if (!pairNk && Map.cellType[d.from.key] === 'build_p' && d.from.key !== ck) pairNk = d.from.key;
+          if (pairNk && pairNk !== ck) {
+            // 移动两字到新位置，保持各自 half 和配对关系
+            var movedSelf = d.unit;
+            var movedPair = d.pairUnit;
+            delete S.units[d.from.key];
+            delete S.units[d.pairKey];
+            S.units[ck] = movedSelf;
+            S.units[pairNk] = movedPair;
+            // 更新配对键
+            S.units[ck].pairedKey = pairNk;
+            S.units[pairNk].pairedKey = ck;
+            return true;
+          }
+          // 没有相邻空格：原位不动
+          return true;
+        }
+        // 目标格有碎片：武将吸收同字碎片升级（反向升级）
+        if (t2h.kind === 'f' && d.unit.name && d.unit.name.indexOf(t2h.ch) >= 0) {
+          if ((d.unit.lv || 1) < C.GEN_MAX_LV) {
+            var newLv2 = (d.unit.lv || 1) + 1;
+            d.unit.lv = newLv2;
+            S.units[d.pairKey].lv = newLv2;
+            delete S.units[ck]; // 消耗碎片
+            var ucr = ck.split('_');
+            var up2 = Map.cellCenter(+ucr[0], +ucr[1]);
+            ZY.Battle.fx('summon', up2.x, up2.y);
+            ZY.Battle.fx('text', up2.x, up2.y - 70, d.unit.name + ' Lv.' + newLv2 + '！', '#b8860b');
+            ZY.sfx('summon');
+            ZY.adapter.vibrate();
+            return true;
+          } else {
+            ZY.UI.toast(d.unit.name + '已满级');
+            return true;
+          }
+        }
+        // 其他情况：原位不动
+        return true;
+      }
+      // 拖到非建造区：原位不动
+      return true;
+    }
+
+    // 从格子拖出（普通单位）
+    // 拖到备战席
+    if (bi >= 0) {
       // 备战席为空：直接放入
       if (!S.bench[bi]) { S.bench[bi] = d.unit; delete S.units[d.from.key]; return true; }
       // 备战席有单位：尝试兵种合成
@@ -528,20 +594,14 @@
         return true;
       }
       // 合并不成功：任意两元素交换位置
-      if (!isLockedHalf(S.bench[bi])) {
-        var tmpB = S.bench[bi];
-        S.bench[bi] = d.unit;
-        S.units[d.from.key] = tmpB;
-      }
+      var tmpB = S.bench[bi];
+      S.bench[bi] = d.unit;
+      S.units[d.from.key] = tmpB;
       return true;
     }
     // 拖到建造格
     if (isBuild && ck !== d.from.key) {
       var t2 = S.units[ck];
-      // 武将半身拖动：禁止（锁定），返回原位
-      if (isLockedHalf(d.unit)) {
-        return true; // 不做任何变动
-      }
       // 目标格为空：移动（若是碎片，尝试相邻合成武将）
       if (!t2) {
         if (d.unit.kind === 'f' && tryFormGeneralAdjacent(S, 'p', ck, d.unit.ch, true)) {
@@ -580,11 +640,9 @@
       if (B.mergeOnBoard(S, 'p', d.from.key, ck)) {
         return true;
       }
-      // 合并不成功：任意两元素交换位置（目标武将半身锁定除外）
-      if (!isLockedHalf(t2)) {
-        S.units[d.from.key] = t2;
-        S.units[ck] = d.unit;
-      }
+      // 合并不成功：任意两元素交换位置
+      S.units[d.from.key] = t2;
+      S.units[ck] = d.unit;
       return true;
     }
     // 拖到非建造区：单位留在原格
