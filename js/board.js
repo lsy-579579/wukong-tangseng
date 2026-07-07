@@ -369,6 +369,8 @@
           d.wasHalf = true;
           d.pairKey = u.pairedKey;
           d.origUnit = u; // 原半身（放回原位时恢复）
+          d.downX = x;   // 记录按下位置，用于判断拖动距离阈值
+          d.downY = y;
         }
         drag = d;
         return true;
@@ -380,7 +382,12 @@
   B.onMove = function (x, y) {
     if (!drag) return false;
     // 武将半身：真正开始拖动时才拆分（配对格变回碎片，拖动对象变碎片）
+    // 需拖动超过阈值才拆分，避免轻微拖动（误触）导致武将被拆散
     if (drag.wasHalf && !drag.split) {
+      var dx0 = x - drag.downX, dy0 = y - drag.downY;
+      if (dx0 * dx0 + dy0 * dy0 < 64) { // 8px 阈值
+        return true;
+      }
       var S = ZY.G.p;
       var pairU = S.units[drag.pairKey];
       S.units[drag.pairKey] = B.makeFrag(pairU.ch);
@@ -551,6 +558,10 @@
       return true;
     }
     // 拖到非建造区：单位留在原格
+    // 武将半身已拆分时，源格已在 onMove 中删除，需将碎片放回原格避免字消失
+    if (d.wasHalf && d.split) {
+      S.units[d.from.key] = d.unit;
+    }
     return true;
   };
 
