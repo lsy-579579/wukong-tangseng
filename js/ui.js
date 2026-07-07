@@ -147,7 +147,7 @@
     var wukongX = monkX - 140, wukongY = monkY + 96, wukongS = 78;
     // 金箍棒：紧贴悟空右侧，以棍中为锚点耍棍花
     ctx.save();
-    var staffCx = wukongX + wukongS / 2 + 50, staffCy = wukongY; // 棍子中心（紧贴悟空右边）
+    var staffCx = wukongX + wukongS / 2, staffCy = wukongY; // 棍子中心（紧贴悟空右边）
     var staffHalf = 70; // 半棍长
     // 两端初始位置（竖直），R.staff 内部会以中点为锚旋转
     var staffTailX = staffCx, staffTailY = staffCy + staffHalf;
