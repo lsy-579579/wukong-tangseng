@@ -55,11 +55,11 @@
     ZY.Enemies.reset();
     ZY.Battle.reset();
     ZY.AI.reset();
-    // 开局各送两个兵到备战席
-    ZY.G.p.bench[0] = ZY.Board.makeSoldier('刀', 1);
-    ZY.G.p.bench[1] = ZY.Board.makeSoldier('弓', 1);
-    ZY.G.e.bench[0] = ZY.Board.makeSoldier('刀', 1);
-    ZY.G.e.bench[1] = ZY.Board.makeSoldier('弓', 1);
+    // 开局备战席直接填满5个随机卡牌（玩家+对手各5个）
+    for (var i = 0; i < C.ECON.benchSize; i++) {
+      ZY.G.p.bench[i] = ZY.Board.rollCard(ZY.G.p);
+      ZY.G.e.bench[i] = ZY.Board.rollCard(ZY.G.e);
+    }
     ZY.UI.toast('把字牌拖上白色空地布阵！');
   }
   Main.newGame = newGame;

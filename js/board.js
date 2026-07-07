@@ -69,7 +69,7 @@
   };
 
   // 抽一张卡牌（按权重）：士兵/碎片/铲子
-  function rollOneCard(S) {
+  B.rollCard = function (S) {
     var roll = Math.random() * 100;
     var acc = 0;
     for (var i = 0; i < C.RECRUIT_POOL.length; i++) {
@@ -97,7 +97,7 @@
       }
     }
     return B.makeSoldier(C.SOLDIER_CHARS[0], 1);
-  }
+  };
 
   // 征兵：原版机制——直接替换整个备战席为5张随机卡牌
   // （士兵/碎片/铲子按权重抽取，原备战席内容被替换）
@@ -110,7 +110,7 @@
     S.mantou -= cost;
     S.recruitCount++;
     for (var i = 0; i < C.ECON.benchSize; i++) {
-      S.bench[i] = rollOneCard(S);
+      S.bench[i] = B.rollCard(S);
     }
     if (sideIsPlayer) ZY.sfx('coin');
     return true;
