@@ -7,11 +7,30 @@
   var AI = {};
   var thinkT = 0;
 
-  // 难度：思考间隔越短、失误率越低越强
+  // 基础难度参数（最低档）
   var THINK_ITV = 1.15;
   var MISS_RATE = 0.22;
 
   AI.reset = function () { thinkT = 2.0; };
+
+  // 根据玩家段位计算 AI 难度：段位越高，AI 思考越快、失误越少、抽卡运气越好
+  // ratio: 0~1，玩家整体进度占比
+  AI.difficulty = function () {
+    var prog = ZY.Rank.load();
+    var C = ZY.C;
+    var total = (C.RANKS.length * C.SUB_LEVELS_PER_RANK * C.STARS_PER_RANK);
+    var cur = prog.rank * C.SUB_LEVELS_PER_RANK * C.STARS_PER_RANK
+      + (prog.subLevel - 1) * C.STARS_PER_RANK
+      + prog.stars;
+    var ratio = Math.max(0, Math.min(1, cur / total));
+    return {
+      ratio: ratio,
+      thinkItv: 1.15 - ratio * 0.70,   // 1.15 → 0.45
+      missRate: 0.22 - ratio * 0.20,   // 0.22 → 0.02
+      luck: ratio                       // 0 → 1
+    };
+  };
+  var curDiff = { thinkItv: THINK_ITV, missRate: MISS_RATE, luck: 0 };
 
   function B() { return ZY.Board; }
 
@@ -84,17 +103,21 @@
     // AI 仅在备战席为空时征兵，避免浪费已有单位
     var allEmpty = S.bench.every(function (x) { return !x; });
     if (allEmpty && S.mantou >= B().recruitCost(S)) {
-      return B().recruit(S, false);
+      return B().recruit(S, false, curDiff.luck);
     }
     return false;
   };
 
+  // 当前 AI 抽卡运气（供 newGame 初始手牌使用）
+  AI.curLuck = function () { return AI.difficulty().luck; };
+
   AI.update = function (dt) {
     var G = ZY.G;
+    curDiff = AI.difficulty();
     thinkT -= dt;
     if (thinkT > 0) return;
-    thinkT = THINK_ITV;
-    if (Math.random() < MISS_RATE) return;
+    thinkT = curDiff.thinkItv;
+    if (Math.random() < curDiff.missRate) return;
     AI.step(G.e, 'e');
   };
 

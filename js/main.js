@@ -56,9 +56,11 @@
     ZY.Battle.reset();
     ZY.AI.reset();
     // 开局备战席直接填满5个随机卡牌（玩家+对手各5个）
+    // 对手 AI 抽卡运气随玩家段位提升
+    var aiLuck = ZY.AI.curLuck();
     for (var i = 0; i < C.ECON.benchSize; i++) {
       ZY.G.p.bench[i] = ZY.Board.rollCard(ZY.G.p);
-      ZY.G.e.bench[i] = ZY.Board.rollCard(ZY.G.e);
+      ZY.G.e.bench[i] = ZY.Board.rollCard(ZY.G.e, aiLuck);
     }
     ZY.UI.toast('把字牌拖上白色空地布阵！');
   }

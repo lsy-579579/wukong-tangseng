@@ -76,39 +76,42 @@
   };
 
   // 抽一张卡牌（按权重）：士兵/碎片/铲子
-  B.rollCard = function (S) {
-    var roll = Math.random() * 100;
+  // luck: 0~1，AI 抽卡运气加成（铲子更少、碎片配对率更高）
+  B.rollCard = function (S, luck) {
+    luck = Math.max(0, Math.min(1, luck || 0));
+    // 运气影响权重：铲子减少、碎片略增
+    var wShovel = 8 * (1 - luck * 0.75);     // 8 → 2
+    var wFrag = 22 + luck * 6;               // 22 → 28
+    var wSoldier = 70;
+    var totalW = wShovel + wFrag + wSoldier;
+    var roll = Math.random() * totalW;
     var acc = 0;
-    for (var i = 0; i < C.RECRUIT_POOL.length; i++) {
-      acc += C.RECRUIT_POOL[i].w;
-      if (roll < acc) {
-        var kind = C.RECRUIT_POOL[i].kind;
-        if (kind === 's') {
-          var ch = C.SOLDIER_CHARS[(Math.random() * C.SOLDIER_CHARS.length) | 0];
-          return B.makeSoldier(ch, 1);
-        } else if (kind === 'shovel') {
-          return B.makeShovel();
-        } else {
-          // 碎片：优先补全已有单字
-          var own = ownedFragChars(S);
-          var wants = [];
-          for (var oc in own) {
-            var pair = C.FRAG_MAP[oc][1];
-            if (!own[pair]) wants.push(pair);
-          }
-          var fc = (wants.length && Math.random() < 0.65)
-            ? wants[(Math.random() * wants.length) | 0]
-            : C.FRAG_CHARS[(Math.random() * C.FRAG_CHARS.length) | 0];
-          return B.makeFrag(fc);
-        }
-      }
+    // 士兵
+    acc += wSoldier;
+    if (roll < acc) {
+      var ch = C.SOLDIER_CHARS[(Math.random() * C.SOLDIER_CHARS.length) | 0];
+      return B.makeSoldier(ch, 1);
     }
-    return B.makeSoldier(C.SOLDIER_CHARS[0], 1);
+    // 铲子
+    acc += wShovel;
+    if (roll < acc) return B.makeShovel();
+    // 碎片：运气越好，越容易补全已有单字
+    var own = ownedFragChars(S);
+    var wants = [];
+    for (var oc in own) {
+      var pair = C.FRAG_MAP[oc][1];
+      if (!own[pair]) wants.push(pair);
+    }
+    var pairChance = 0.65 + luck * 0.30; // 0.65 → 0.95
+    var fc = (wants.length && Math.random() < pairChance)
+      ? wants[(Math.random() * wants.length) | 0]
+      : C.FRAG_CHARS[(Math.random() * C.FRAG_CHARS.length) | 0];
+    return B.makeFrag(fc);
   };
 
   // 征兵：原版机制——直接替换整个备战席为5张随机卡牌
   // （士兵/碎片/铲子按权重抽取，原备战席内容被替换）
-  B.recruit = function (S, sideIsPlayer) {
+  B.recruit = function (S, sideIsPlayer, luck) {
     var cost = B.recruitCost(S);
     if (S.mantou < cost) {
       if (sideIsPlayer) ZY.UI.toast('馒头不足');
@@ -117,7 +120,7 @@
     S.mantou -= cost;
     S.recruitCount++;
     for (var i = 0; i < C.ECON.benchSize; i++) {
-      S.bench[i] = B.rollCard(S);
+      S.bench[i] = B.rollCard(S, luck);
     }
     if (sideIsPlayer) ZY.sfx('coin');
     return true;
