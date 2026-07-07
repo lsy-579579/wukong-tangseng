@@ -191,7 +191,23 @@
   // ---- 输入 ----
   function onDown(x, y) {
     var G = ZY.G, ub = ZY.UI.buttons;
+    // 头像选择弹窗打开时：优先处理弹窗点击
+    if (ZY.UI.avatarPickerOpen) {
+      for (var i = 0; i < ZY.UI.avatarButtons.length; i++) {
+        var ab = ZY.UI.avatarButtons[i];
+        if (R.inside(ab, x, y)) {
+          ZY.UI.setAvatar(ab.ch);
+          ZY.sfx('click');
+          ZY.UI.avatarPickerOpen = false;
+          return;
+        }
+      }
+      // 点击弹窗外关闭
+      ZY.UI.avatarPickerOpen = false;
+      return;
+    }
     if (!G || G.scene === 'start') {
+      if (ub.avatar && R.inside(ub.avatar, x, y)) { ZY.sfx('click'); ZY.UI.avatarPickerOpen = true; return; }
       if (R.inside(ub.start, x, y)) { ZY.sfx('click'); newGame(); }
       return;
     }

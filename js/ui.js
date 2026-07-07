@@ -8,6 +8,17 @@
   var UI = {};
   var toasts = [];
   UI.buttons = {};
+  // 头像选择弹窗状态
+  UI.avatarPickerOpen = false;
+  UI.avatarButtons = []; // 弹窗中各头像按钮区域
+
+  // 读取当前头像字符（持久化）
+  UI.currentAvatar = function () {
+    return A.storageGet('zy_avatar') || C.AVATAR_DEFAULT;
+  };
+  UI.setAvatar = function (ch) {
+    A.storageSet('zy_avatar', ch);
+  };
 
   UI.toast = function (text) {
     toasts.push({ text: text, t: 0, dur: 1.8 });
@@ -49,17 +60,9 @@
 
     // 顶部：头像框 + 刀币
     ctx.save();
-    ctx.fillStyle = '#efe9d8';
-    R.roundRect(ctx, 36, 30, 84, 84, 10);
-    ctx.fill();
-    ctx.strokeStyle = '#3a3126';
-    ctx.lineWidth = 4;
-    R.roundRect(ctx, 36, 30, 84, 84, 10);
-    ctx.stroke();
-    R.font(ctx, 44, true);
-    ctx.fillStyle = '#5a4a34';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('云', 78, 74);
+    R.avatar(ctx, 78, 72, 42, UI.currentAvatar(), false);
+    // 头像点击区域（圆形按钮）
+    UI.buttons.avatar = { x: 36, y: 30, w: 84, h: 84 };
     // 刀币胶囊
     ctx.fillStyle = 'rgba(50,40,28,0.85)';
     R.roundRect(ctx, 140, 44, 240, 52, 26);
@@ -161,6 +164,53 @@
       ctx.restore();
     }
     drawToasts(ctx);
+    // 头像选择弹窗（覆盖在最上层）
+    if (UI.avatarPickerOpen) UI.drawAvatarPicker(ctx);
+  };
+
+  // 头像选择弹窗：5列×2行网格，点击切换头像
+  UI.drawAvatarPicker = function (ctx) {
+    var DW = A.DW, DH = A.DH;
+    ctx.save();
+    // 半透明遮罩
+    ctx.fillStyle = 'rgba(30,26,20,0.7)';
+    ctx.fillRect(0, 0, DW, DH);
+    // 弹窗面板
+    var pw = 460, ph = 360;
+    var px = (DW - pw) / 2, py = (DH - ph) / 2;
+    ctx.fillStyle = '#f4f0e4';
+    R.roundRect(ctx, px, py, pw, ph, 16);
+    ctx.fill();
+    ctx.strokeStyle = '#3a3126';
+    ctx.lineWidth = 5;
+    R.roundRect(ctx, px, py, pw, ph, 16);
+    ctx.stroke();
+    // 标题
+    R.font(ctx, 36, true);
+    ctx.fillStyle = '#5a4a34';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('选择头像', DW / 2, py + 50);
+    // 头像网格（5列×2行）
+    var cols = 5, rows = 2, ar = 36, gap = 22;
+    var gridW = cols * (ar * 2) + (cols - 1) * gap;
+    var startX = (DW - gridW) / 2 + ar;
+    var startY = py + 110;
+    var cur = UI.currentAvatar();
+    UI.avatarButtons = [];
+    for (var i = 0; i < C.AVATARS.length; i++) {
+      var cx = startX + (i % cols) * (ar * 2 + gap);
+      var cy = startY + Math.floor(i / cols) * (ar * 2 + gap);
+      var sel = (C.AVATARS[i] === cur);
+      R.avatar(ctx, cx, cy, ar, C.AVATARS[i], sel);
+      UI.avatarButtons.push({ x: cx - ar, y: cy - ar, w: ar * 2, h: ar * 2, ch: C.AVATARS[i] });
+    }
+    // 关闭按钮区域（点击弹窗外也关闭，这里记录底部按钮）
+    var closeY = py + ph - 60;
+    R.font(ctx, 28, true);
+    ctx.fillStyle = '#8a3a28';
+    ctx.fillText('点击头像确认', DW / 2, closeY);
+    ctx.restore();
   };
 
   // ---- 对局 HUD ----

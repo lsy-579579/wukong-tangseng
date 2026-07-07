@@ -893,6 +893,29 @@
 
   // 5 卡牌选择面板已移除：原版机制为征兵直接替换备战席，无需弹窗
 
+  // 玩家头像：圆形底 + 单字，selected 时金色高亮边框
+  R.avatar = function (ctx, x, y, r, ch, selected) {
+    ctx.save();
+    // 圆形底
+    ctx.fillStyle = selected ? '#fff4d0' : '#efe9d8';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // 边框
+    ctx.strokeStyle = selected ? '#e8a92e' : '#3a3126';
+    ctx.lineWidth = selected ? 5 : 3;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // 单字
+    R.font(ctx, r * 1.05, true);
+    ctx.fillStyle = '#5a4a34';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ch, x, y + 1);
+    ctx.restore();
+  };
+
   // 攻击范围圈：单位周围的半透明圆形射程指示（参考原版样式）
   // 金色淡填充 + 虚线边框，中心为单位像素位置，半径 = range * cell
   R.rangeCircle = function (ctx, x, y, radius, side) {
