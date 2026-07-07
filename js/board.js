@@ -189,34 +189,8 @@
     return null;
   }
 
-  // 自动扫描：将任意相邻的配对碎片合成为两格武将（覆盖所有放置路径）
-  function autoSynthesize(S, side, isPlayer) {
-    var Map = M_();
-    var pairs = [];
-    for (var k in S.units) {
-      var u = S.units[k];
-      if (!u || u.kind !== 'f') continue;
-      var cr = k.split('_');
-      var found = findAdjFragPair(S, side, +cr[0], +cr[1], u.ch);
-      if (found) pairs.push({ placeKey: k, placeCh: u.ch, neighborKey: found.neighborKey, pair: found.pair });
-    }
-    for (var i = 0; i < pairs.length; i++) {
-      var pr = pairs[i];
-      if (S.units[pr.placeKey] && S.units[pr.placeKey].kind === 'f' &&
-          S.units[pr.neighborKey] && S.units[pr.neighborKey].kind === 'f') {
-        var pair = pr.pair;
-        var neighborCh = S.units[pr.neighborKey].ch;
-        var firstChar = pair.name[0];
-        var neighborHalf = (neighborCh === firstChar) ? 0 : 1;
-        var placeHalf = (pr.placeCh === firstChar) ? 0 : 1;
-        S.units[pr.neighborKey] = B.makeGeneralHalf(pair.name, neighborCh, neighborHalf, pr.placeKey);
-        S.units[pr.placeKey] = B.makeGeneralHalf(pair.name, pr.placeCh, placeHalf, pr.neighborKey);
-        var cr2 = pr.placeKey.split('_');
-        var p = Map.cellCenter(+cr2[0], +cr2[1]);
-        afterMerge(S, S.units[pr.placeKey], p.x, p.y, isPlayer);
-      }
-    }
-  }
+  // 自动扫描：保留为空操作（合成只在并排放置时触发）
+  function autoSynthesize(S, side, isPlayer) { /* 并排放置时已即时合成 */ }
   B.autoSynthesize = autoSynthesize;
   B.findAdjFragPair = findAdjFragPair;
 
@@ -468,25 +442,6 @@
           ZY.sfx('click');
           return true;
         }
-        // 同格碎片合成：拖碎片到配对碎片上，分两格放置
-        if (d.unit.kind === 'f' && target.kind === 'f') {
-          var fp = B.fragPair(d.unit, target);
-          if (fp) {
-            var fcr = ck.split('_');
-            var emptyNk = findAdjEmptyBuild(S, 'p', +fcr[0], +fcr[1]);
-            if (emptyNk) {
-              var firstChar = fp.name[0];
-              var targetHalf = (target.ch === firstChar) ? 0 : 1;
-              var dragHalf = (d.unit.ch === firstChar) ? 0 : 1;
-              S.units[ck] = B.makeGeneralHalf(fp.name, target.ch, targetHalf, emptyNk);
-              S.units[emptyNk] = B.makeGeneralHalf(fp.name, d.unit.ch, dragHalf, ck);
-              S.bench[d.from.idx] = null;
-              var fp2 = Map.cellCenter(+fcr[0], +fcr[1]);
-              afterMerge(S, S.units[ck], fp2.x, fp2.y, true);
-              return true;
-            }
-          }
-        }
         // 武将升级：拖同字碎片到武将半身上，等级+1
         if (d.unit.kind === 'f' && target.kind === 'g' && target.half != null) {
           if (tryUpgradeGeneral(S, d, ck)) return true;
@@ -612,25 +567,6 @@
         S.units[ck] = d.unit;
         delete S.units[d.from.key];
         return true;
-      }
-      // 同格碎片合成：拖碎片到配对碎片上，分两格放置
-      if (d.unit.kind === 'f' && t2.kind === 'f') {
-        var fp3 = B.fragPair(d.unit, t2);
-        if (fp3) {
-          var fcr3 = ck.split('_');
-          var emptyNk3 = findAdjEmptyBuild(S, 'p', +fcr3[0], +fcr3[1]);
-          if (emptyNk3 && emptyNk3 !== d.from.key) {
-            var firstChar3 = fp3.name[0];
-            var targetHalf3 = (t2.ch === firstChar3) ? 0 : 1;
-            var dragHalf3 = (d.unit.ch === firstChar3) ? 0 : 1;
-            S.units[ck] = B.makeGeneralHalf(fp3.name, t2.ch, targetHalf3, emptyNk3);
-            S.units[emptyNk3] = B.makeGeneralHalf(fp3.name, d.unit.ch, dragHalf3, ck);
-            delete S.units[d.from.key];
-            var fp4 = Map.cellCenter(+fcr3[0], +fcr3[1]);
-            afterMerge(S, S.units[ck], fp4.x, fp4.y, true);
-            return true;
-          }
-        }
       }
       // 武将升级：拖同字碎片到武将半身上，等级+1
       if (d.unit.kind === 'f' && t2.kind === 'g' && t2.half != null) {
