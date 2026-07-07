@@ -92,11 +92,19 @@
     ctx.lineWidth = 3;
     ctx.fillText('悟空与唐僧', DW / 2, DH * 0.20);
     ctx.strokeText('悟空与唐僧', DW / 2, DH * 0.20);
-    // 段位
+    // 段位（炫彩渐变）
     R.font(ctx, 34, true);
-    ctx.fillStyle = '#3a3126';
     var prog = ZY.Rank.load();
-    ctx.fillText(prog.rankName, DW / 2, DH * 0.20 + 78);
+    var ry = DH * 0.20 + 78;
+    var rGrad = ctx.createLinearGradient(DW / 2 - 120, ry, DW / 2 + 120, ry);
+    rGrad.addColorStop(0, '#e8c53a');    // 金
+    rGrad.addColorStop(0.5, '#e84858');  // 红
+    rGrad.addColorStop(1, '#a85ef0');    // 紫
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(60,20,10,0.4)';
+    ctx.strokeText(prog.rankName, DW / 2, ry);
+    ctx.fillStyle = rGrad;
+    ctx.fillText(prog.rankName, DW / 2, ry);
     // 星级
     for (var i = 0; i < C.STARS_PER_RANK; i++) {
       R.star(ctx, DW / 2 - 128 + i * 64, DH * 0.20 + 140, 26, i < prog.stars);
