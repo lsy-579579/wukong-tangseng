@@ -143,10 +143,13 @@
     ctx.restore();
     // 僧字（替代阿斗）：无框 + 左右摆动躲避 + 金箍 + 红心
     var monkX = DW / 2, monkY = by - 26, monkS = 110;
-    // 金箍棒：棒尾在左下，棒头戳向僧字右上方
+    // 金箍棒：紧贴僧字右侧，以棍中为锚点耍棍花
     ctx.save();
-    var staffTailX = monkX - 95, staffTailY = monkY + 130; // 棒尾（固定）
-    var staffHeadX = monkX + 52, staffHeadY = monkY - 28;  // 棒头目标（戳向僧字右上）
+    var staffCx = monkX + 95, staffCy = monkY + 10; // 棍子中心（紧贴僧字右边）
+    var staffHalf = 70; // 半棍长
+    // 两端初始位置（竖直），R.staff 内部会以中点为锚旋转
+    var staffTailX = staffCx, staffTailY = staffCy + staffHalf;
+    var staffHeadX = staffCx, staffHeadY = staffCy - staffHalf;
     // 先画金箍棒，拿到戳刺相位
     var pokePhase = R.staff(ctx, staffTailX, staffTailY, staffHeadX, staffHeadY, t, 1.2);
     // 再画僧字，传入戳刺相位让它摆动躲避
