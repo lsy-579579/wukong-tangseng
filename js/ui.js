@@ -12,11 +12,14 @@
   UI.avatarPickerOpen = false;
   UI.avatarButtons = []; // 弹窗中各头像按钮区域
 
-  // 读取当前头像字符（持久化）
+  // 读取当前头像（持久化，校验合法性）
   UI.currentAvatar = function () {
-    return A.storageGet('zy_avatar') || C.AVATAR_DEFAULT;
+    var v = A.storageGet('zy_avatar');
+    if (v && C.AVATARS.indexOf(v) >= 0) return v;
+    return C.AVATAR_DEFAULT;
   };
   UI.setAvatar = function (ch) {
+    if (C.AVATARS.indexOf(ch) < 0) return; // 仅接受合法头像
     A.storageSet('zy_avatar', ch);
   };
 

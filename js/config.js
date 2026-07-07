@@ -68,18 +68,10 @@
   C.LEVEL_NAME = '火焰山';
   C.MAX_WAVE = 10; // 撑过即判定胜利（若对手先失守则提前胜利）
 
-  // 玩家头像（西游记5位主角，使用人物图片）
+  // 玩家头像（西游记5位主角，程序化绘制人物画像）
   C.AVATARS = ['wukong', 'bajie', 'shaseng', 'tangsan', 'bailong'];
   C.AVATAR_LABELS = { wukong: '悟空', bajie: '八戒', shaseng: '沙僧', tangsan: '唐三', bailong: '白龙' };
   C.AVATAR_DEFAULT = 'wukong';
-  // 头像图片 URL（文生图 API，浏览器端动态加载）
-  C.AVATAR_IMG = {
-    wukong: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Sun%20Wukong%20Monkey%20King%20from%20Journey%20to%20the%20West%2C%20golden%20headband%2C%20heroic%20face%2C%20ink%20painting%20style%2C%20centered%20portrait&image_size=square_hd',
-    bajie: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Zhu%20Bajie%20Pigsy%20from%20Journey%20to%20the%20West%2C%20pig%20face%20with%20big%20ears%2C%20monk%20robe%2C%20funny%20expression%2C%20ink%20painting%20style%2C%20centered%20portrait&image_size=square_hd',
-    shaseng: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Sha%20Wujing%20Friar%20Sand%20from%20Journey%20to%20the%20West%2C%20bearded%20monk%20with%20skull%20necklace%2C%20calm%20face%2C%20ink%20painting%20style%2C%20centered%20portrait&image_size=square_hd',
-    tangsan: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Tang%20Sanzang%20Tripitaka%20monk%20from%20Journey%20to%20the%20West%2C%20bald%20monk%20with%20monk%20robe%2C%20kind%20face%2C%20ink%20painting%20style%2C%20centered%20portrait&image_size=square_hd',
-    bailong: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Bai%20Longma%20White%20Dragon%20prince%20from%20Journey%20to%20the%20West%2C%20young%20man%20in%20white%20robe%2C%20noble%20face%2C%20ink%20painting%20style%2C%20centered%20portrait&image_size=square_hd'
-  };
 
   // 玩家段位（11 级）：每级 5 阶（一~五），每阶满 5 星后再通关一次升下一阶
   C.RANKS = [

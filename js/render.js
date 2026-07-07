@@ -893,49 +893,102 @@
 
   // 5 卡牌选择面板已移除：原版机制为征兵直接替换备战席，无需弹窗
 
-  // 玩家头像：圆形人物图片，selected 时金色高亮边框
-  // id 为人物标识（wukong/bajie/...），图片浏览器端动态加载
-  var avatarImgs = {}; // id -> Image
-  var avatarLoading = {}; // id -> bool
-  function ensureAvatarImg(id) {
-    if (avatarImgs[id] || avatarLoading[id]) return;
-    var url = ZY.C.AVATAR_IMG && ZY.C.AVATAR_IMG[id];
-    if (!url) return;
-    avatarLoading[id] = true;
-    var img = new Image();
-    img.onload = function () { avatarImgs[id] = img; };
-    img.onerror = function () { avatarLoading[id] = false; };
-    img.src = url;
-  }
+  // 玩家头像：圆形彩色人物画像（程序化绘制，每个角色独特配色与特征）
+  // id 为人物标识（wukong/bajie/shaseng/tangsan/bailong）
+  var avatarPalette = {
+    wukong:  { bg: '#d4a02e', face: '#f4d9a8', accent: '#a8402c' },
+    bajie:   { bg: '#8a9a6a', face: '#e8c8a8', accent: '#d08a4a' },
+    shaseng: { bg: '#5a7a9a', face: '#e8c8a8', accent: '#3a4a5a' },
+    tangsan: { bg: '#c84a3a', face: '#f4d9a8', accent: '#e8c53a' },
+    bailong: { bg: '#6a8aca', face: '#f0e0d0', accent: '#ffffff' }
+  };
   R.avatar = function (ctx, x, y, r, id, selected) {
     ctx.save();
-    // 圆形底
-    ctx.fillStyle = selected ? '#fff4d0' : '#efe9d8';
+    var pal = avatarPalette[id] || avatarPalette.wukong;
+    // 圆形彩色背景
+    ctx.fillStyle = pal.bg;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    // 人物图片（已加载则裁剪圆形绘制）
-    var img = avatarImgs[id];
-    if (img) {
-      ctx.save();
+    // 圆形裁剪绘制人物特征
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+    ctx.clip();
+    // 脸部底色圆
+    ctx.fillStyle = pal.face;
+    ctx.beginPath();
+    ctx.arc(x, y - r * 0.05, r * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    // 各角色特征
+    if (id === 'wukong') {
+      // 金箍（额前金色环）
+      ctx.strokeStyle = '#e8c53a';
+      ctx.lineWidth = r * 0.12;
       ctx.beginPath();
-      ctx.arc(x, y, r - 2, 0, Math.PI * 2);
-      ctx.clip();
-      // 居中裁剪正方形绘制
-      var s = Math.min(img.width, img.height);
-      var sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-      ctx.drawImage(img, sx, sy, s, s, x - r, y - r, r * 2, r * 2);
-      ctx.restore();
-    } else {
-      // 图片未加载：显示人物名字首字作为 fallback
-      var label = (ZY.C.AVATAR_LABELS && ZY.C.AVATAR_LABELS[id]) || '?';
-      R.font(ctx, r * 1.05, true);
-      ctx.fillStyle = '#5a4a34';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label[0], x, y + 1);
-      ensureAvatarImg(id); // 触发加载
+      ctx.arc(x, y - r * 0.35, r * 0.55, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+      // 火眼金睛
+      ctx.fillStyle = '#a8402c';
+      ctx.beginPath(); ctx.arc(x - r * 0.22, y - r * 0.05, r * 0.08, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + r * 0.22, y - r * 0.05, r * 0.08, 0, Math.PI * 2); ctx.fill();
+    } else if (id === 'bajie') {
+      // 猪鼻
+      ctx.fillStyle = pal.accent;
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.15, r * 0.22, r * 0.16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = pal.face;
+      ctx.beginPath(); ctx.arc(x - r * 0.1, y + r * 0.15, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + r * 0.1, y + r * 0.15, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      // 大耳朵
+      ctx.fillStyle = pal.face;
+      ctx.beginPath(); ctx.ellipse(x - r * 0.55, y, r * 0.18, r * 0.3, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + r * 0.55, y, r * 0.18, r * 0.3, 0.3, 0, Math.PI * 2); ctx.fill();
+    } else if (id === 'shaseng') {
+      // 胡子
+      ctx.fillStyle = '#3a3a3a';
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.25, r * 0.35, r * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 项链珠
+      ctx.fillStyle = '#d8d0c0';
+      for (var i = -2; i <= 2; i++) {
+        ctx.beginPath(); ctx.arc(x + i * r * 0.12, y + r * 0.5, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (id === 'tangsan') {
+      // 僧帽（红色顶部）
+      ctx.fillStyle = pal.bg;
+      ctx.beginPath();
+      ctx.arc(x, y - r * 0.55, r * 0.7, Math.PI, Math.PI * 2);
+      ctx.fill();
+      // 金色帽边
+      ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = r * 0.08;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.7, y - r * 0.55);
+      ctx.lineTo(x + r * 0.7, y - r * 0.55);
+      ctx.stroke();
+    } else if (id === 'bailong') {
+      // 龙角
+      ctx.fillStyle = pal.accent;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.35, y - r * 0.4);
+      ctx.lineTo(x - r * 0.2, y - r * 0.75);
+      ctx.lineTo(x - r * 0.1, y - r * 0.4);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.35, y - r * 0.4);
+      ctx.lineTo(x + r * 0.2, y - r * 0.75);
+      ctx.lineTo(x + r * 0.1, y - r * 0.4);
+      ctx.fill();
+      // 银色发
+      ctx.fillStyle = '#e8edf5';
+      ctx.beginPath();
+      ctx.arc(x, y - r * 0.15, r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.restore();
     // 边框
     ctx.strokeStyle = selected ? '#e8a92e' : '#3a3126';
     ctx.lineWidth = selected ? 5 : 3;
