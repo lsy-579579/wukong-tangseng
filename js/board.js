@@ -357,6 +357,8 @@
     var bi = benchSlotAt(x, y);
     if (bi >= 0 && S.bench[bi]) {
       drag = { from: { type: 'bench', idx: bi }, unit: S.bench[bi], x: x, y: y, downX: x, downY: y, moved: false };
+      // 按下即显示攻击范围（抬手或移动后消失）
+      selected = { side: 'p', key: 'bench_' + bi };
       return true;
     }
     var cell = Map.cellAt(x, y);
@@ -373,6 +375,8 @@
           d.origUnit = u; // 原半身（放回原位时恢复）
         }
         drag = d;
+        // 按下即显示攻击范围（抬手或移动后消失）
+        selected = { side: 'p', key: k };
         return true;
       }
     }
@@ -410,11 +414,9 @@
     var d = drag;
     drag = null;
 
-    // 未拖动（点击）：切换攻击范围选中显示
+    // 未拖动（点击）：抬手即清除攻击范围显示
     if (!d.moved) {
-      var selKey = (d.from.type === 'bench') ? ('bench_' + d.from.idx) : d.from.key;
-      if (selected && selected.side === 'p' && selected.key === selKey) selected = null;
-      else selected = { side: 'p', key: selKey };
+      selected = null;
       return true;
     }
     // 以下为真正拖拽放置逻辑（d.moved === true，武将半身此时已拆分）
