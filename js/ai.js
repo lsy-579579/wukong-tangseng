@@ -15,6 +15,22 @@
 
   // 根据玩家段位计算 AI 难度：段位越高，AI 思考越快、失误越少、抽卡运气越好
   // ratio: 0~1，玩家整体进度占比
+  // 难度曲线（数据驱动，二次曲线）：基于 11 段位×300 局扫描 + 敏感度探针(500~700 局)标定
+  // 旧线性曲线(1.15→0.45 / 0.22→0.02)胜率过于平坦且非单调：rank0~rank10 仅 52%→48%，
+  // rank7/8 甚至反超 rank0。新曲线加陡并校正锚点（玩家侧固定 thinkItv=0.8/missRate=0.10）：
+  //   rank0  (r=0.00): thinkItv=1.75 missRate=0.43 → 实测玩家胜率~54%（新手友好，不劝退）
+  //   rank5  (r=0.45): thinkItv=0.85 missRate=0.12 → ~47%（中段对等，1000局实测）
+  //   rank10 (r=0.91): thinkItv=0.34 missRate=0.00 luck=1.00 → ~45%（高段有挑战，晋升有成就感）
+  // thinkItv 设下限 0.34：探针实测低于此值 AI 思考过快会触发"过度征兵"——
+  // AI.step 第5步征兵会清空整个备战席，thinkItv=0.32 时已配对碎片被反复冲掉，
+  // 敌方反而变弱（玩家胜率从 45% 回升至 51%）。0.34 是实测的最强安全点。
+  // luck 在高段位额外加成（ratio>0.8 时线性提升至 1.0）：探针实测 luck 从 0.91→1.0
+  // 可使 rank10 玩家胜率从 49.5% 降至 ~45%。机制：newGame 中敌方初始手牌用 aiLuck
+  // 抽卡（玩家初始手牌 luck=0），luck 越高敌方初始牌越好（铲子更少、碎片配对率更高），
+  // 这一开局优势随对局累积放大。注：征兵时双方共享 curDiff.luck，但初始手牌的
+  // 不对称才是 luck 影响胜率的主因。
+  // 注：本游戏为"并行防守竞速"，双方各自防守自己的波次不直接交战，平局判玩家胜，
+  // 因此 thinkItv/missRate 对胜率的影响被削弱，曲线跨度受此机制上限约束。
   AI.difficulty = function () {
     var prog = ZY.Rank.load();
     var C = ZY.C;
@@ -23,11 +39,15 @@
       + (prog.subLevel - 1) * C.STARS_PER_RANK
       + prog.stars;
     var ratio = Math.max(0, Math.min(1, cur / total));
+    var r = ratio;
+    var thinkItv = Math.max(0.34, 0.944 * r * r - 2.409 * r + 1.75);
+    var missRate = Math.max(0, 0.460 * r * r - 0.891 * r + 0.43);
+    var luck = Math.min(1, ratio + Math.max(0, ratio - 0.8));
     return {
       ratio: ratio,
-      thinkItv: 1.15 - ratio * 0.70,   // 1.15 → 0.45
-      missRate: 0.22 - ratio * 0.20,   // 0.22 → 0.02
-      luck: ratio                       // 0 → 1
+      thinkItv: thinkItv,
+      missRate: missRate,
+      luck: luck
     };
   };
   var curDiff = { thinkItv: THINK_ITV, missRate: MISS_RATE, luck: 0 };

@@ -93,14 +93,40 @@ const ZY = sandbox.ZY;
 const C = ZY.C;
 
 // ============================================================
-// 3. 固定段位 = 力士·一（rank 0, subLevel 1, stars 0）
-//    使 AI 难度恒定（thinkItv=1.15s, missRate=0.22, luck=0）
+// 3. 固定段位（可由命令行参数指定，用于批量扫描各段位难度）
+//    用法: node sim/run.js <rank> <subLevel> <stars> <N>
+//    无参数则保持原行为: rank 0, subLevel 1, stars 0, 100 局
+//    环境变量 SWEEP=1 时仅输出单行 JSON 摘要（供 sweep.js 解析）
 // ============================================================
-const FIXED_RANK = { rank: 0, subLevel: 1, stars: 0 };
+const ARGS = process.argv.slice(2);
+function argInt(i, def) { const v = ARGS[i]; return (v !== undefined && !isNaN(v)) ? parseInt(v, 10) : def; }
+const FIXED_RANK = {
+  rank: argInt(0, 0),
+  subLevel: argInt(1, 1),
+  stars: argInt(2, 0)
+};
+const SWEEP_MODE = process.env.SWEEP === '1';
 ZY.Rank.load = function () {
   const d = { rank: FIXED_RANK.rank, subLevel: FIXED_RANK.subLevel, stars: FIXED_RANK.stars };
   d.rankName = ZY.Rank.getRankName(d);
   return d;
+};
+// 敏感度探针 hook：环境变量 DIFF_OVERRIDE 设为 JSON 时，强制 AI.difficulty 返回指定参数
+// 用于在不改 ai.js 的前提下测量 thinkItv/missRate/luck 对胜率的影响
+// 例: DIFF_OVERRIDE='{"thinkItv":0.3,"missRate":0,"luck":0.9}' node sim/run.js 10 1 0 200
+const DIFF_OVERRIDE = process.env.DIFF_OVERRIDE ? JSON.parse(process.env.DIFF_OVERRIDE) : null;
+const _origDifficulty = ZY.AI.difficulty;
+ZY.AI.difficulty = function () {
+  if (DIFF_OVERRIDE) {
+    const base = _origDifficulty.call(ZY.AI);
+    return {
+      ratio: base.ratio,
+      thinkItv: DIFF_OVERRIDE.thinkItv,
+      missRate: DIFF_OVERRIDE.missRate,
+      luck: DIFF_OVERRIDE.luck
+    };
+  }
+  return _origDifficulty.call(ZY.AI);
 };
 ZY.Rank.promoteOnWin = function () {
   // 单局从 0 星起算，赢一局仅 +1 星，不触发升阶（满 5 星后再赢才升阶）
@@ -227,20 +253,35 @@ function runOneGame(idx) {
 }
 
 // ============================================================
-// 7. 跑 100 局
+// 7. 跑 N 局（N 可由命令行第 4 个参数指定，默认 100）
 // ============================================================
-const N = 100;
+const N = argInt(3, 100);
 const records = [];
-console.log('=== 西游记塔防（赵云与阿斗对战版）无头模拟 ===');
-console.log('固定段位: 力士·一 (rank 0, subLevel 1, stars 0)');
-console.log('  → AI 难度 thinkItv=1.15s missRate=0.22 luck=0');
-console.log('玩家驱动: AI.step 间隔 ' + PLAYER_ITV + 's, 失误率 ' + (PLAYER_MISS * 100) + '% ( competent, not perfect )');
-console.log('模拟步长 dt=' + DT + 's, 每局上限 ' + MAX_SIM_SECONDS + 's');
-console.log('开始运行 ' + N + ' 局...');
+// 计算当前段位的 AI 难度参数（与 AI.difficulty 公式一致）
+const _diff = ZY.AI.difficulty();
+const _rankInfo = ZY.Rank.load();
+// ratio 计算（与 AI.difficulty 内部一致）
+const _total = C.RANKS.length * C.SUB_LEVELS_PER_RANK * C.STARS_PER_RANK;
+const _cur = FIXED_RANK.rank * C.SUB_LEVELS_PER_RANK * C.STARS_PER_RANK
+  + (FIXED_RANK.subLevel - 1) * C.STARS_PER_RANK
+  + FIXED_RANK.stars;
+const RATIO = Math.max(0, Math.min(1, _cur / _total));
+
+if (!SWEEP_MODE) {
+  console.log('=== 西游记塔防（赵云与阿斗对战版）无头模拟 ===');
+  console.log('段位: ' + _rankInfo.rankName + ' (rank ' + FIXED_RANK.rank
+    + ', subLevel ' + FIXED_RANK.subLevel + ', stars ' + FIXED_RANK.stars
+    + ') | ratio=' + RATIO.toFixed(4));
+  console.log('  → AI 难度 thinkItv=' + _diff.thinkItv.toFixed(3)
+    + 's missRate=' + _diff.missRate.toFixed(3) + ' luck=' + _diff.luck.toFixed(3));
+  console.log('玩家驱动: AI.step 间隔 ' + PLAYER_ITV + 's, 失误率 ' + (PLAYER_MISS * 100) + '% ( competent, not perfect )');
+  console.log('模拟步长 dt=' + DT + 's, 每局上限 ' + MAX_SIM_SECONDS + 's');
+  console.log('开始运行 ' + N + ' 局...');
+}
 for (let i = 1; i <= N; i++) {
   const rec = runOneGame(i);
   records.push(rec);
-  if (i % 10 === 0) console.log('  已完成 ' + i + '/' + N);
+  if (!SWEEP_MODE && i % 10 === 0) console.log('  已完成 ' + i + '/' + N);
 }
 
 // ============================================================
@@ -268,6 +309,36 @@ const lossWaves = losses.map(r => r.wave);
 // 失败波数分布（看玩家通常死在第几波）
 const lossWaveHist = {};
 losses.forEach(r => { lossWaveHist[r.wave] = (lossWaveHist[r.wave] || 0) + 1; });
+
+// ---- sweep 摘要：单行 JSON（供 sweep.js 解析）----
+const summary = {
+  rank: FIXED_RANK.rank,
+  rankName: _rankInfo.rankName,
+  ratio: RATIO,
+  thinkItv: _diff.thinkItv,
+  missRate: _diff.missRate,
+  luck: _diff.luck,
+  N: N,
+  wins: wins.length,
+  losses: losses.length,
+  draws: draws.length,
+  winRate: wins.length / N,
+  avgWave: avg(records.map(r => r.wave)),
+  avgTime: avg(records.map(r => r.time)),
+  avgPMaxLv: avg(records.map(r => r.pMaxLv)),
+  avgEMaxLv: avg(records.map(r => r.eMaxLv)),
+  avgPRecruits: avg(records.map(r => r.pRecruits)),
+  avgERecruits: avg(records.map(r => r.eRecruits)),
+  avgPGenerals: avg(records.map(r => r.pGenerals)),
+  avgEGenerals: avg(records.map(r => r.eGenerals)),
+  avgPMantouSpent: avg(records.map(r => r.pMantouSpent)),
+  avgEMantouSpent: avg(records.map(r => r.eMantouSpent)),
+  timeouts: timeouts.length
+};
+if (SWEEP_MODE) {
+  process.stdout.write('SWEEP_RESULT ' + JSON.stringify(summary) + '\n');
+  process.exit(0);
+}
 
 console.log('');
 console.log('==================== 统计报告 ====================');
