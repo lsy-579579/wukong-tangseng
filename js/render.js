@@ -583,27 +583,21 @@
     R.goldRing(ctx, x, y - s * 0.52, s * 0.5, t);
   };
 
-  // 金箍棒（带戳刺动画）
-  // x1,y1: 棒尾固定点；x2,y2: 棒头目标点；t: 时间；period: 戳刺周期（秒）
+  // 金箍棒（耍棍花旋转动画）
+  // x1,y1: 棒尾固定点（握把）；x2,y2: 棒头初始目标点；t: 时间；period: 转一圈周期（秒）
   R.staff = function (ctx, x1, y1, x2, y2, t, period) {
-    period = period || 1.2;
-    var phase = (t % period) / period; // 0~1
-    // 戳刺曲线：用 ease-in-out 让棒头快速戳下后收回
-    // 0~0.3: 戳下（棒头向目标点推进）；0.3~1: 收回
-    var stab;
-    if (phase < 0.3) {
-      var p = phase / 0.3; // 0~1
-      // ease-out：快速戳下
-      stab = 1 - Math.pow(1 - p, 3);
-    } else {
-      var p2 = (phase - 0.3) / 0.7; // 0~1
-      // ease-in-out：缓慢收回
-      stab = 1 - (p2 < 0.5 ? 2 * p2 * p2 : 1 - Math.pow(-2 * p2 + 2, 2) / 2);
-    }
-    // 棒头实际位置：从收回位（距目标 0.35）戳到目标点
-    var retractRatio = 0.35;
-    var headX = x2 + (x1 - x2) * retractRatio * (1 - stab);
-    var headY = y2 + (y1 - y2) * retractRatio * (1 - stab);
+    period = period || 0.9;
+    // 棍长 = 棒尾到棒头目标的距离
+    var dx0 = x2 - x1, dy0 = y2 - y1;
+    var len = Math.hypot(dx0, dy0) || 1;
+    var baseAngle = Math.atan2(dy0, dx0); // 初始指向目标的角度
+    // 旋转：每 period 转一圈（耍棍花）
+    var spinAngle = baseAngle + (t / period) * Math.PI * 2;
+    var headX = x1 + Math.cos(spinAngle) * len;
+    var headY = y1 + Math.sin(spinAngle) * len;
+    // pokePhase: 棍头扫过目标方向（靠近僧字）时接近 1，供僧字摆动躲避
+    var diff = Math.atan2(Math.sin(spinAngle - baseAngle), Math.cos(spinAngle - baseAngle));
+    var stab = Math.max(0, 1 - Math.abs(diff) / (Math.PI * 0.3));
 
     ctx.save();
     // 棒身方向向量与法向量
