@@ -481,10 +481,14 @@
           afterMerge(S, merged, p.x, p.y, true);
           return true;
         }
-        // 合并不成功：任意两元素交换位置（武将半身锁定除外）
+        // 合并不成功：任意两元素交换位置
         if (!isLockedHalf(d.unit) && !isLockedHalf(target)) {
           S.units[ck] = d.unit;
           S.bench[d.from.idx] = target;
+          // 交换后放置到格子的碎片检查是否触发武将合成
+          if (d.unit.kind === 'f' && tryFormGeneralAdjacent(S, 'p', ck, d.unit.ch, true)) {
+            return true;
+          }
         }
         return true;
       }
@@ -537,6 +541,13 @@
       // 合并不成功：任意两元素交换位置
       S.units[d.from.key] = t2;
       S.units[ck] = d.unit;
+      // 交换后检查是否触发武将合成（按姓名顺序：首字左、尾字右）
+      if (d.unit.kind === 'f' && tryFormGeneralAdjacent(S, 'p', ck, d.unit.ch, true)) {
+        return true;
+      }
+      if (t2.kind === 'f' && tryFormGeneralAdjacent(S, 'p', d.from.key, t2.ch, true)) {
+        return true;
+      }
       return true;
     }
     // 拖到非建造区：单位留在原格
