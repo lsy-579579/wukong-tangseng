@@ -149,8 +149,7 @@
       ZY.Board.eachUnit(S, function (u, c, r, k) {
         var p = ZY.Map.cellCenter(c, r);
         var isDragSrc = d && side === 'p' && d.from.type === 'cell' && d.from.key === k;
-        var isDragPair = d && side === 'p' && d.isHalf && d.pairKey === k;
-        ZY.Board.drawUnit(ctx, u, p.x, p.y, L.cell - 12, (isDragSrc || isDragPair) ? 0.3 : 1);
+        ZY.Board.drawUnit(ctx, u, p.x, p.y, L.cell - 12, isDragSrc ? 0.3 : 1);
       });
     });
   }

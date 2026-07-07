@@ -264,10 +264,6 @@
     var d = ZY.Board.dragging();
     if (d) {
       ZY.Board.drawUnit(ctx, d.unit, d.x, d.y - 40, L.cell + 10, 0.92);
-      // 武将半身：额外画出另一半幽灵（在旁边偏移）
-      if (d.isHalf && d.pairUnit) {
-        ZY.Board.drawUnit(ctx, d.pairUnit, d.x + L.cell + 6, d.y - 40, L.cell + 10, 0.92);
-      }
       // 拖铲子时高亮所有可铲 block 格（玩家侧所有绿格）
       if (d.unit.kind === 'shovel') {
         for (var uc = 0; uc < ZY.Map.COLS; uc++) {
@@ -285,25 +281,12 @@
             }
           }
         }
-      } else if (d.isHalf) {
-        // 武将半身：高亮目标格
-        var hc = ZY.Map.buildCellAt(d.x, d.y - 40, 'p');
-        if (hc) {
-          var hpc = ZY.Map.cellCenter(hc.c, hc.r);
-          ctx.save();
-          ctx.strokeStyle = '#c9922e';
-          ctx.lineWidth = 4;
-          R.roundRect(ctx, hpc.x - L.cell / 2 + 2, hpc.y - L.cell / 2 + 2, L.cell - 4, L.cell - 4, 8);
-          ctx.stroke();
-          ctx.restore();
-        }
       } else {
         // 普通单位：高亮可放置格（用 buildCellAt 与放置判定一致）
         var cell = ZY.Map.buildCellAt(d.x, d.y - 40, 'p');
         if (cell) {
           var k = cell.c + '_' + cell.r;
           var t = G.p.units[k];
-          // 空格或可合成或可交换 → 金色；武将半身目标不可放 → 红色
           var ok = !t || ZY.Board.tryMerge(d.unit, t) || !(t.kind === 'g' && t.half != null);
           var pc = ZY.Map.cellCenter(cell.c, cell.r);
           ctx.save();

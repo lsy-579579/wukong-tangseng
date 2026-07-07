@@ -352,11 +352,12 @@
       if (Map.cellType[k] === 'build_p' && S.units[k]) {
         var u = S.units[k];
         var d = { from: { type: 'cell', key: k }, unit: u, x: x, y: y };
-        // 武将半身：记录配对信息，拖动时整体移动
+        // 武将半身：拾取后单字可独立拖动（拖走后另一半变回碎片）
+        // 为支持"未拖动放回原位"，保留原半身信息，拖动开始时才真正拆分
         if (u.kind === 'g' && u.half != null && u.pairedKey && S.units[u.pairedKey]) {
-          d.isHalf = true;
-          d.pairUnit = S.units[u.pairedKey];
+          d.wasHalf = true;
           d.pairKey = u.pairedKey;
+          d.origUnit = u; // 原半身（放回原位时恢复）
         }
         drag = d;
         return true;
@@ -367,6 +368,15 @@
 
   B.onMove = function (x, y) {
     if (!drag) return false;
+    // 武将半身：真正开始拖动时才拆分（配对格变回碎片，拖动对象变碎片）
+    if (drag.wasHalf && !drag.split) {
+      var S = ZY.G.p;
+      var pairU = S.units[drag.pairKey];
+      S.units[drag.pairKey] = B.makeFrag(pairU.ch);
+      drag.unit = B.makeFrag(drag.unit.ch);
+      delete S.units[drag.from.key];
+      drag.split = true;
+    }
     drag.x = x; drag.y = y;
     return true;
   };
@@ -377,6 +387,11 @@
     var S = G.p;
     var d = drag;
     drag = null;
+
+    // 武将半身未被拖动（仅点击）：原样保留，不做任何变动
+    if (d.wasHalf && !d.split) {
+      return true;
+    }
 
     // 与拖拽幽灵显示位置一致（幽灵画在 y-40），放置判定也用 y-40
     var py = y - 40;
@@ -467,74 +482,6 @@
     }
 
     // 从格子拖出
-    // 武将半身特殊处理：整体移动（两字一起搬），不拆分不交换
-    if (d.isHalf) {
-      // 拖到备战席：两字拆成碎片放入（需两个空位）
-      if (bi >= 0) {
-        var otherBi = -1;
-        for (var ob = 0; ob < C.ECON.benchSize; ob++) {
-          if (ob !== bi && !S.bench[ob]) { otherBi = ob; break; }
-        }
-        if (otherBi >= 0) {
-          S.bench[bi] = B.makeFrag(d.unit.ch);
-          S.bench[otherBi] = B.makeFrag(d.pairUnit.ch);
-          delete S.units[d.from.key];
-          delete S.units[d.pairKey];
-        }
-        return true;
-      }
-      // 拖到建造格：整体移动到 ck + 相邻空格
-      if (isBuild) {
-        var t2h = S.units[ck];
-        // 目标格为空：找相邻空格放另一半
-        if (!t2h) {
-          var pcr = ck.split('_');
-          var pairNk = findAdjEmptyBuild(S, 'p', +pcr[0], +pcr[1]);
-          // 排除来源格（来源格即将被清空，可作为另一半落点）
-          if (!pairNk && Map.cellType[d.from.key] === 'build_p' && d.from.key !== ck) pairNk = d.from.key;
-          if (pairNk && pairNk !== ck) {
-            // 移动两字到新位置，保持各自 half 和配对关系
-            var movedSelf = d.unit;
-            var movedPair = d.pairUnit;
-            delete S.units[d.from.key];
-            delete S.units[d.pairKey];
-            S.units[ck] = movedSelf;
-            S.units[pairNk] = movedPair;
-            // 更新配对键
-            S.units[ck].pairedKey = pairNk;
-            S.units[pairNk].pairedKey = ck;
-            return true;
-          }
-          // 没有相邻空格：原位不动
-          return true;
-        }
-        // 目标格有碎片：武将吸收同字碎片升级（反向升级）
-        if (t2h.kind === 'f' && d.unit.name && d.unit.name.indexOf(t2h.ch) >= 0) {
-          if ((d.unit.lv || 1) < C.GEN_MAX_LV) {
-            var newLv2 = (d.unit.lv || 1) + 1;
-            d.unit.lv = newLv2;
-            S.units[d.pairKey].lv = newLv2;
-            delete S.units[ck]; // 消耗碎片
-            var ucr = ck.split('_');
-            var up2 = Map.cellCenter(+ucr[0], +ucr[1]);
-            ZY.Battle.fx('summon', up2.x, up2.y);
-            ZY.Battle.fx('text', up2.x, up2.y - 70, d.unit.name + ' Lv.' + newLv2 + '！', '#b8860b');
-            ZY.sfx('summon');
-            ZY.adapter.vibrate();
-            return true;
-          } else {
-            ZY.UI.toast(d.unit.name + '已满级');
-            return true;
-          }
-        }
-        // 其他情况：原位不动
-        return true;
-      }
-      // 拖到非建造区：原位不动
-      return true;
-    }
-
-    // 从格子拖出（普通单位）
     // 拖到备战席
     if (bi >= 0) {
       // 备战席为空：直接放入
