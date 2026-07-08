@@ -49,10 +49,20 @@
     if (u.kind === 'g') {
       var g = C.GENERALS[u.name];
       var glv = u.lv || 1;
+      // 武器加成：查询该角色装备的武器（仅玩家 p 侧武将享受）
+      var weapon = null;
+      if (ZY.Weapon && u.side === 'p') weapon = ZY.Weapon.equipped(u.name);
+      var dmgMul = C.GEN_LV_DMG_MUL(glv);
+      var dmg = Math.round(g.dmg * dmgMul);
+      var shape = null;
+      if (weapon) {
+        dmg += weapon.dmg;
+        shape = weapon.shape;
+      }
       return {
-        dmg: Math.round(g.dmg * C.GEN_LV_DMG_MUL(glv)),
-        itv: g.itv * C.GEN_LV_ITV_MUL(glv),
-        range: g.range, skill: g.skill, general: true, lv: glv
+        dmg: dmg, itv: g.itv * C.GEN_LV_ITV_MUL(glv),
+        range: g.range, skill: g.skill, general: true, lv: glv,
+        weapon: weapon, weaponShape: shape
       };
     }
     return { inert: true }; // 碎片/铲子不能作战
@@ -157,8 +167,9 @@
   };
 
   // 武将半身制造（lv: 武将等级 1~5，影响伤害和攻击速度）
-  B.makeGeneralHalf = function (name, ch, half, pairedKey, lv) {
-    return { kind: 'g', name: name, ch: ch, half: half, pairedKey: pairedKey, lv: lv || 1, cd: 0, attackT: 0 };
+  // side: 'p'|'e'，用于武器加成只对玩家生效
+  B.makeGeneralHalf = function (name, ch, half, pairedKey, lv, side) {
+    return { kind: 'g', name: name, ch: ch, half: half, pairedKey: pairedKey, lv: lv || 1, side: side, cd: 0, attackT: 0 };
   };
 
   // 武将升级倍率（每级伤害×1.5，攻击间隔×0.85）
@@ -227,8 +238,8 @@
     var placeHalf = (placeCh === firstChar) ? 0 : 1;
     // 合成时保留等级：取放置碎片与邻居碎片携带等级的最大值（重新合成武将不丢等级）
     var keepLv = Math.max(placeLv || 0, neighborU.lv || 0, 1);
-    S.units[found.neighborKey] = B.makeGeneralHalf(pair.name, neighborCh, neighborHalf, placeKey, keepLv);
-    S.units[placeKey] = B.makeGeneralHalf(pair.name, placeCh, placeHalf, found.neighborKey, keepLv);
+    S.units[found.neighborKey] = B.makeGeneralHalf(pair.name, neighborCh, neighborHalf, placeKey, keepLv, side);
+    S.units[placeKey] = B.makeGeneralHalf(pair.name, placeCh, placeHalf, found.neighborKey, keepLv, side);
     var p = M_().cellCenter(c, r);
     afterMerge(S, S.units[placeKey], p.x, p.y, isPlayer);
     return true;

@@ -9,5 +9,6 @@ require('./js/enemies.js');
 require('./js/battle.js');
 require('./js/ai.js');
 require('./js/rank.js');
+require('./js/weapon.js');
 require('./js/ui.js');
 require('./js/main.js');

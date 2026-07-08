@@ -1203,6 +1203,157 @@
     ctx.restore();
   };
 
+  // 武器弹道造型：按武器 shape 绘制专属弹道
+  // 已 translate+rotate 到弹头位置，朝向 +x 方向
+  // color: 品质色（绿/蓝/紫/橙），gold: 武将金色
+  R.drawWeaponBullet = function (ctx, shape, color, gold) {
+    var c = color || '#b8860b';
+    var metal = gold ? '#8a6a10' : '#3a3126';
+    ctx.save();
+    if (shape === 'staff') {
+      // 金箍棒：黑铁棍身 + 两道金箍 + 端头金球
+      ctx.fillStyle = '#3a3530';
+      ctx.fillRect(-13, -2.5, 24, 5);
+      ctx.fillStyle = c;
+      ctx.fillRect(-10, -3, 4, 6);
+      ctx.fillRect(4, -3, 4, 6);
+      ctx.beginPath(); ctx.arc(13, 0, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (shape === 'rake') {
+      // 九齿钉耙：耙柄 + 九齿扇形头
+      ctx.strokeStyle = metal; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(2, 0); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.fillRect(2, -5, 4, 10);
+      ctx.strokeStyle = c; ctx.lineWidth = 1.5;
+      for (var i = 0; i < 5; i++) {
+        var y0 = -4 + i * 2;
+        ctx.beginPath(); ctx.moveTo(6, y0); ctx.lineTo(13, y0); ctx.stroke();
+      }
+    } else if (shape === 'monkspade') {
+      // 月牙铲：长柄 + 月牙铲头
+      ctx.strokeStyle = metal; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(4, 0); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(4, -6); ctx.quadraticCurveTo(14, 0, 4, 6);
+      ctx.lineTo(4, -6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = metal; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(4, -6); ctx.lineTo(4, 6); ctx.stroke();
+    } else if (shape === 'crosier') {
+      // 九环锡杖：长杖 + 顶部环
+      ctx.strokeStyle = metal; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(8, 0); ctx.stroke();
+      ctx.strokeStyle = c; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(10, 0, 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(10, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+    } else if (shape === 'pearl') {
+      // 明珠：发光圆球 + 拖尾
+      ctx.fillStyle = c;
+      ctx.shadowColor = c; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(8, 0, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath(); ctx.arc(6, -1.5, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(2, 0); ctx.stroke();
+    } else if (shape === 'fan') {
+      // 芭蕉扇：扇骨扇面
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(-12, 0);
+      ctx.arc(-12, 0, 14, -0.6, 0.6);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = metal; ctx.lineWidth = 1.5;
+      for (var f1 = -1; f1 <= 1; f1++) {
+        ctx.beginPath();
+        ctx.moveTo(-12, 0); ctx.lineTo(-12 + Math.cos(f1 * 0.5) * 13, Math.sin(f1 * 0.5) * 13);
+        ctx.stroke();
+      }
+    } else if (shape === 'gourd') {
+      // 葫芦：双圆球
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(-4, 0, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(6, 0, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = metal;
+      ctx.fillRect(-1, -1.5, 3, 3);
+    } else if (shape === 'vase') {
+      // 净瓶：瓶身 + 瓶口
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(-8, -3); ctx.lineTo(-6, -5); ctx.lineTo(6, -5); ctx.lineTo(8, -3);
+      ctx.lineTo(8, 5); ctx.lineTo(-8, 5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = metal;
+      ctx.fillRect(-3, -8, 6, 3);
+    } else if (shape === 'rope') {
+      // 幌金绳：波浪绳索
+      ctx.strokeStyle = c; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-13, 0);
+      for (var rx = -13; rx <= 13; rx += 3) {
+        ctx.quadraticCurveTo(rx + 1.5, (rx % 6 === 0 ? -3 : 3), rx + 3, 0);
+      }
+      ctx.stroke();
+    } else if (shape === 'sword') {
+      // 剑：剑柄 + 护手 + 直刃
+      ctx.fillStyle = metal;
+      ctx.fillRect(-12, -1.5, 5, 3);
+      ctx.fillRect(-7, -4, 2, 8);
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(-5, -2); ctx.lineTo(12, 0); ctx.lineTo(-5, 2); ctx.closePath(); ctx.fill();
+    } else if (shape === 'knife') {
+      // 刀：弧形刃
+      ctx.fillStyle = metal; ctx.fillRect(-12, -1.5, 5, 3);
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(-7, -2); ctx.lineTo(10, -3);
+      ctx.quadraticCurveTo(13, 0, 10, 3);
+      ctx.lineTo(-7, 2); ctx.closePath(); ctx.fill();
+    } else if (shape === 'spear') {
+      // 枪：长杆 + 三角头
+      ctx.strokeStyle = metal; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(5, 0); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.moveTo(5, -3); ctx.lineTo(13, 0); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
+    } else if (shape === 'bow') {
+      // 箭：杆 + 箭头 + 羽尾
+      ctx.strokeStyle = metal; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(7, 0); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(5, -4); ctx.lineTo(5, 4); ctx.closePath(); ctx.fill();
+    } else if (shape === 'shield') {
+      // 盾：椭圆盾牌
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.ellipse(0, 0, 8, 11, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = metal; ctx.lineWidth = 1.5; ctx.stroke();
+    } else if (shape === 'whip') {
+      // 鞭：节鞭
+      ctx.strokeStyle = c; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-13, 0);
+      ctx.quadraticCurveTo(0, -4, 13, 0);
+      ctx.stroke();
+      ctx.fillStyle = metal;
+      for (var wi = -10; wi <= 10; wi += 5) {
+        ctx.beginPath(); ctx.arc(wi, wi * 0.1, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (shape === 'axe') {
+      // 斧：斧柄 + 斧头
+      ctx.strokeStyle = metal; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(4, 0); ctx.stroke();
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(4, -7); ctx.lineTo(13, -4); ctx.lineTo(13, 4); ctx.lineTo(4, 7);
+      ctx.quadraticCurveTo(2, 0, 4, -7); ctx.closePath(); ctx.fill();
+    } else {
+      // 兜底：品质色圆点
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  };
+
   R.inside = function (b, x, y) {
     return b && x >= b.x && x <= b.x + b.w && y <= b.y + b.h && y >= b.y;
   };

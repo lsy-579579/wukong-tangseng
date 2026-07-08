@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 TMP=$(mktemp /tmp/zy_sim_XXXX.js)
 {
   echo 'var print = function (s) { console.log(s); };'
-  cat js/adapter.js js/config.js js/map.js js/render.js js/audio.js js/board.js js/enemies.js js/battle.js js/ai.js js/ui.js js/main.js tools/headless_sim.js
+  cat js/adapter.js js/config.js js/map.js js/render.js js/audio.js js/board.js js/enemies.js js/battle.js js/ai.js js/rank.js js/weapon.js js/ui.js js/main.js tools/headless_sim.js
 } > "$TMP"
 osascript -l JavaScript "$TMP" 2>&1
 rc=$?

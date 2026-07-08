@@ -209,8 +209,11 @@
       ZY.UI.avatarPickerOpen = false;
       return;
     }
+    // 武器库界面：独立交互
+    if (ZY.weaponLibOpen) { onWeaponLibDown(x, y); return; }
     if (!G || G.scene === 'start') {
       if (ub.avatar && R.inside(ub.avatar, x, y)) { ZY.sfx('click'); ZY.UI.avatarPickerOpen = true; return; }
+      if (ub.weaponLib && R.inside(ub.weaponLib, x, y)) { ZY.sfx('click'); ZY.weaponLibOpen = true; return; }
       if (R.inside(ub.start, x, y)) { ZY.sfx('click'); newGame(); }
       return;
     }
@@ -230,13 +233,82 @@
     ZY.Board.onDown(x, y);
   }
 
+  // 武器库交互：down
+  function onWeaponLibDown(x, y) {
+    var ub = ZY.UI.buttons, W = ZY.Weapon;
+    // 返回
+    if (R.inside(ub.wlibBack, x, y)) { ZY.sfx('click'); ZY.weaponLibOpen = false; return; }
+    // 合成按钮
+    for (var i = 0; i < ZY.UI.weaponCraftBtns.length; i++) {
+      var cb = ZY.UI.weaponCraftBtns[i];
+      if (R.inside(cb, x, y)) {
+        if (W.craft(cb.wid)) { ZY.sfx('summon'); ZY.UI.toast('合成成功！'); }
+        return;
+      }
+    }
+    // 点击已装备槽：卸下
+    for (var s = 0; s < ZY.UI.weaponSlots.length; s++) {
+      var slot = ZY.UI.weaponSlots[s];
+      if (R.inside(slot, x, y)) {
+        if (W.equipped(slot.name)) { W.unequip(slot.name); ZY.sfx('click'); }
+        return;
+      }
+    }
+    // 点击已拥有武器：开始拖拽
+    for (var k = 0; k < ZY.UI.weaponItems.length; k++) {
+      var it = ZY.UI.weaponItems[k];
+      if (R.inside(it, x, y)) {
+        ZY.UI.weaponDrag = { wid: it.wid, x: x, y: y, downX: x, downY: y, moved: false };
+        ZY.sfx('click');
+        return;
+      }
+    }
+  }
+
+  function onWeaponLibMove(x, y) {
+    var d = ZY.UI.weaponDrag;
+    if (!d) return;
+    if (!d.moved) {
+      var dx0 = x - d.downX, dy0 = y - d.downY;
+      if (dx0 * dx0 + dy0 * dy0 < 64) return;
+      d.moved = true;
+    }
+    d.x = x; d.y = y;
+  }
+
+  function onWeaponLibUp(x, y) {
+    var d = ZY.UI.weaponDrag;
+    ZY.UI.weaponDrag = null;
+    if (!d || !d.moved) return;
+    var W = ZY.Weapon;
+    // 落在角色槽：尝试装备
+    for (var s = 0; s < ZY.UI.weaponSlots.length; s++) {
+      var slot = ZY.UI.weaponSlots[s];
+      if (R.inside(slot, x, y)) {
+        if (W.canEquip(slot.name, d.wid)) {
+          W.equip(slot.name, d.wid);
+          ZY.sfx('merge');
+          ZY.UI.toast(C.WEAPON_MAP[d.wid].name + ' → ' + slot.name);
+        } else {
+          var wp = C.WEAPON_MAP[d.wid];
+          if (wp.owner && wp.owner !== slot.name) {
+            ZY.UI.toast(wp.name + ' 仅 ' + wp.owner + ' 可装备');
+          }
+        }
+        return;
+      }
+    }
+  }
+
   function onMove(x, y) {
     var G = ZY.G;
+    if (ZY.weaponLibOpen) { onWeaponLibMove(x, y); return; }
     if (G && G.scene === 'play') ZY.Board.onMove(x, y);
   }
 
   function onUp(x, y) {
     var G = ZY.G;
+    if (ZY.weaponLibOpen) { onWeaponLibUp(x, y); return; }
     if (G && G.scene === 'play') {
       ZY.Board.onUp(x, y);
       // 放置后扫描相邻碎片自动合成武将（覆盖所有放置路径）
@@ -293,7 +365,8 @@
         ZY.UI.drawOver(ctx, G.win);
       } else {
         ZY.UI.update(dt);
-        ZY.UI.drawStart(ctx);
+        if (ZY.weaponLibOpen) ZY.UI.drawWeaponLib(ctx);
+        else ZY.UI.drawStart(ctx);
       }
     }
     A.raf(frame);

@@ -172,6 +172,10 @@
     ctx.fillText('⚔', 0, 0);
     ctx.restore();
 
+    // 武器库入口按钮（开始按钮左下）
+    UI.buttons.weaponLib = { x: DW / 2 - 190, y: DH * 0.68 + 116, w: 180, h: 56, label: '兵器库 ⚔', fs: 28 };
+    R.redButton(ctx, UI.buttons.weaponLib);
+
     var bestWave = parseInt(A.storageGet('zy_best') || '0', 10);
     if (bestWave > 0) {
       ctx.save();
@@ -451,6 +455,186 @@
     R.redButton(ctx, UI.buttons.resume);
     UI.buttons.home = { x: DW / 2 - 160, y: DH * 0.5 + 120, w: 320, h: 96, label: '返回首页', fs: 40 };
     R.darkButton(ctx, UI.buttons.home);
+  };
+
+  // ============ 武器库 ============
+  // 武器库界面：顶部5角色装备槽 + 中间4品质武器列表 + 拖拽穿戴
+  UI.weaponSlots = [];      // 角色装备槽区域 [{x,y,w,h,name}]
+  UI.weaponItems = [];      // 武器列表项区域 [{x,y,w,h,wid,kind:'owned'|'frag'}]
+  UI.weaponCraftBtns = [];  // 可合成武器的合成按钮 [{x,y,w,h,wid}]
+  UI.weaponDrag = null;     // 拖拽中的武器 {wid,x,y}
+  UI.weaponScroll = 0;      // 列表滚动偏移（暂未实现滚动，预留）
+
+  UI.drawWeaponLib = function (ctx) {
+    var DW = A.DW, DH = A.DH;
+    var W = ZY.Weapon, C2 = C;
+    R.paper(ctx, DW, DH);
+
+    // 顶部标题 + 返回
+    ctx.save();
+    R.font(ctx, 48, true);
+    ctx.fillStyle = '#8a3a28';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('兵器库', DW / 2, 60);
+    ctx.restore();
+    UI.buttons.wlibBack = { x: 20, y: 28, w: 110, h: 56, label: '返回', fs: 28 };
+    R.darkButton(ctx, UI.buttons.wlibBack);
+
+    // ===== 顶部5角色装备槽 =====
+    UI.weaponSlots = [];
+    var slotW = 108, slotH = 130, slotGap = 12;
+    var slotsW = 5 * slotW + 4 * slotGap;
+    var slotStartX = (DW - slotsW) / 2;
+    var slotY = 110;
+    ctx.save();
+    R.font(ctx, 24, true);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (var i = 0; i < C2.GENERAL_NAMES.length; i++) {
+      var name = C2.GENERAL_NAMES[i];
+      var sx = slotStartX + i * (slotW + slotGap);
+      // 槽位底框
+      ctx.fillStyle = 'rgba(60,50,40,0.12)';
+      R.roundRect(ctx, sx, slotY, slotW, slotH, 10); ctx.fill();
+      ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 2;
+      R.roundRect(ctx, sx, slotY, slotW, slotH, 10); ctx.stroke();
+      // 角色名
+      ctx.fillStyle = '#5a4a30';
+      R.font(ctx, 26, true);
+      ctx.fillText(name, sx + slotW / 2, slotY + 22);
+      // 当前装备的武器
+      var eq = W.equipped(name);
+      if (eq) {
+        var qCfg = C2.WEAPON_QUALITY[eq.quality];
+        // 武器图标方块
+        ctx.fillStyle = qCfg.color;
+        R.roundRect(ctx, sx + 14, slotY + 42, slotW - 28, 40, 6); ctx.fill();
+        ctx.fillStyle = '#fff';
+        R.font(ctx, 20, true);
+        ctx.fillText(eq.name, sx + slotW / 2, slotY + 62);
+        // 加成
+        ctx.fillStyle = '#6a5c42';
+        R.font(ctx, 18, false);
+        ctx.fillText('+' + eq.dmg + ' 攻击', sx + slotW / 2, slotY + 100);
+        // 卸下提示
+        ctx.fillStyle = '#a04848';
+        R.font(ctx, 16, false);
+        ctx.fillText('点击卸下', sx + slotW / 2, slotY + 118);
+      } else {
+        ctx.fillStyle = '#9a8a70';
+        R.font(ctx, 18, false);
+        ctx.fillText('未装备', sx + slotW / 2, slotY + 70);
+        ctx.fillText('拖武器到此', sx + slotW / 2, slotY + 100);
+      }
+      UI.weaponSlots.push({ x: sx, y: slotY, w: slotW, h: slotH, name: name });
+    }
+    ctx.restore();
+
+    // ===== 中间武器列表（按品质分组） =====
+    UI.weaponItems = [];
+    UI.weaponCraftBtns = [];
+    var listY = slotY + slotH + 24;
+    var itemW = 160, itemH = 90, itemGap = 10;
+    var perRow = Math.floor((DW - 32) / (itemW + itemGap));
+    var rowY = listY;
+
+    ctx.save();
+    C2.WEAPON_QUALITY_ORDER.forEach(function (qkey) {
+      var qCfg = C2.WEAPON_QUALITY[qkey];
+      // 品质标题
+      ctx.fillStyle = qCfg.color;
+      R.font(ctx, 28, true);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText('● ' + qCfg.name + '（' + (qCfg.fragNeed > 0 ? qCfg.fragNeed + '碎片合成' : '成品掉落') + ' · 掉率' + (qCfg.drop * 100) + '%）', 24, rowY + 14);
+      rowY += 34;
+      // 该品质所有武器
+      var pool = C2.WEAPONS.filter(function (w) { return w.quality === qkey; });
+      var col = 0;
+      for (var wi = 0; wi < pool.length; wi++) {
+        var wp = pool[wi];
+        var owns = W.owns(wp.id);
+        var fragN = W.fragCount(wp.id);
+        var need = qCfg.fragNeed;
+        var x = 24 + col * (itemW + itemGap);
+        var y = rowY;
+        // 卡片底
+        if (owns) {
+          ctx.fillStyle = qCfg.color;
+        } else if (need > 0 && fragN > 0) {
+          ctx.fillStyle = 'rgba(120,110,90,0.25)';
+        } else {
+          ctx.fillStyle = 'rgba(120,110,90,0.12)';
+        }
+        R.roundRect(ctx, x, y, itemW, itemH, 8); ctx.fill();
+        ctx.strokeStyle = owns ? qCfg.color : 'rgba(80,70,60,0.4)';
+        ctx.lineWidth = owns ? 2 : 1;
+        R.roundRect(ctx, x, y, itemW, itemH, 8); ctx.stroke();
+        // 名称
+        ctx.fillStyle = owns ? '#fff' : (fragN > 0 ? '#5a4a30' : '#9a8a70');
+        R.font(ctx, 22, true);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(wp.name, x + itemW / 2, y + 24);
+        // owner 限定标识
+        if (wp.owner) {
+          ctx.fillStyle = owns ? '#fff' : '#9a8a70';
+          R.font(ctx, 16, false);
+          ctx.fillText('【' + wp.owner + '专属】', x + itemW / 2, y + 46);
+        }
+        // 状态/碎片进度
+        if (owns) {
+          ctx.fillStyle = '#fff';
+          R.font(ctx, 18, true);
+          ctx.fillText('+' + wp.dmg + ' 攻', x + itemW / 2, y + 70);
+          UI.weaponItems.push({ x: x, y: y, w: itemW, h: itemH, wid: wp.id, kind: 'owned' });
+        } else if (need > 0) {
+          ctx.fillStyle = fragN > 0 ? '#5a4a30' : '#9a8a70';
+          R.font(ctx, 18, false);
+          ctx.fillText(fragN + '/' + need + ' 碎片', x + itemW / 2, y + 70);
+          // 可合成：合成按钮
+          if (fragN >= need) {
+            var cbX = x + itemW / 2 - 40, cbY = y + itemH - 8;
+            UI.weaponCraftBtns.push({ x: cbX, y: cbY - 26, w: 80, h: 24, wid: wp.id });
+          }
+        } else {
+          ctx.fillStyle = '#9a8a70';
+          R.font(ctx, 16, false);
+          ctx.fillText('未拥有', x + itemW / 2, y + 70);
+        }
+        col++;
+        if (col >= perRow) { col = 0; rowY += itemH + 12; }
+      }
+      if (col > 0) rowY += itemH + 12;
+      rowY += 8;
+    });
+    ctx.restore();
+
+    // 合成按钮（画在最后，确保在最上层）
+    ctx.save();
+    UI.weaponCraftBtns.forEach(function (cb) {
+      ctx.fillStyle = '#e8a23a';
+      R.roundRect(ctx, cb.x, cb.y, cb.w, cb.h, 6); ctx.fill();
+      ctx.fillStyle = '#fff';
+      R.font(ctx, 18, true);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('合成', cb.x + cb.w / 2, cb.y + cb.h / 2);
+    });
+    ctx.restore();
+
+    // 拖拽中的武器幽灵
+    if (UI.weaponDrag) {
+      var wd = C2.WEAPON_MAP[UI.weaponDrag.wid];
+      var qC = C2.WEAPON_QUALITY[wd.quality];
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = qC.color;
+      R.roundRect(ctx, UI.weaponDrag.x - 50, UI.weaponDrag.y - 22, 100, 44, 8); ctx.fill();
+      ctx.fillStyle = '#fff';
+      R.font(ctx, 20, true);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(wd.name, UI.weaponDrag.x, UI.weaponDrag.y);
+      ctx.restore();
+    }
+
+    drawToasts(ctx);
   };
 
   ZY.UI = UI;

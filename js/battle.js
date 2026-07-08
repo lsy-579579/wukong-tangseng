@@ -130,7 +130,9 @@
         exec: exec,
         arrow: u.kind === 's' && u.ch === '弓' || st.skill === 'snipe',
         gold: u.kind === 'g',
-        shape: u.kind === 's' ? u.ch : (st.skill === 'snipe' ? '弓' : null)
+        shape: u.kind === 's' ? u.ch : (st.skill === 'snipe' ? '弓' : null),
+        weaponShape: st.weaponShape || null,
+        weaponColor: st.weapon ? C.WEAPON_QUALITY[st.weapon.quality].color : null
       });
       if (side === 'p') ZY.sfx('shoot');
     });
@@ -179,72 +181,46 @@
       ctx.save();
       ctx.translate(bl.x, bl.y);
       ctx.rotate(bl.ang || 0);
-      var sh = bl.shape, isGold = bl.gold;
-      var metal = isGold ? '#b8860b' : '#3a3126';
-      var blade = isGold ? '#e8c53a' : '#c8c8d0';
-      if (sh === '刀') {
-        // 小刀：刀身（弧形刃）+ 刀柄
-        ctx.fillStyle = metal;
-        ctx.fillRect(-9, -2, 6, 4); // 刀柄
-        ctx.fillStyle = blade;
-        ctx.beginPath();
-        ctx.moveTo(-3, -2);
-        ctx.lineTo(10, -3);
-        ctx.quadraticCurveTo(13, 0, 10, 3);
-        ctx.lineTo(-3, 2);
-        ctx.closePath();
-        ctx.fill();
-      } else if (sh === '枪') {
-        // 矛：长杆 + 矛头
-        ctx.strokeStyle = metal;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-11, 0); ctx.lineTo(5, 0);
-        ctx.stroke();
-        ctx.fillStyle = blade;
-        ctx.beginPath();
-        ctx.moveTo(5, -3);
-        ctx.lineTo(13, 0);
-        ctx.lineTo(5, 3);
-        ctx.closePath();
-        ctx.fill();
-      } else if (sh === '弓') {
-        // 箭：细杆 + 箭头 + 羽尾
-        ctx.strokeStyle = metal;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-10, 0); ctx.lineTo(7, 0);
-        ctx.stroke();
-        ctx.fillStyle = blade;
-        ctx.beginPath();
-        ctx.moveTo(12, 0); ctx.lineTo(5, -4); ctx.lineTo(5, 4);
-        ctx.closePath();
-        ctx.fill();
-        // 羽尾
-        ctx.strokeStyle = '#8a6a10';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(-10, 0); ctx.lineTo(-13, -3);
-        ctx.moveTo(-10, 0); ctx.lineTo(-13, 3);
-        ctx.stroke();
-      } else if (sh === '骑') {
-        // 剑：十字护手 + 直刃 + 剑柄
-        ctx.fillStyle = metal;
-        ctx.fillRect(-9, -2, 5, 4); // 剑柄
-        ctx.fillRect(-5, -4, 2, 8); // 护手横档
-        ctx.fillStyle = blade;
-        ctx.beginPath();
-        ctx.moveTo(-3, -2);
-        ctx.lineTo(11, 0);
-        ctx.lineTo(-3, 2);
-        ctx.closePath();
-        ctx.fill();
+      // 武将装备武器：用武器专属弹道造型
+      if (bl.weaponShape && R.drawWeaponBullet) {
+        R.drawWeaponBullet(ctx, bl.weaponShape, bl.weaponColor, bl.gold);
       } else {
-        // 默认/武将：圆点
-        ctx.fillStyle = isGold ? '#b8860b' : '#3a3126';
-        ctx.beginPath();
-        ctx.arc(0, 0, isGold ? 6 : 4.5, 0, Math.PI * 2);
-        ctx.fill();
+        var sh = bl.shape, isGold = bl.gold;
+        var metal = isGold ? '#b8860b' : '#3a3126';
+        var blade = isGold ? '#e8c53a' : '#c8c8d0';
+        if (sh === '刀') {
+          ctx.fillStyle = metal;
+          ctx.fillRect(-9, -2, 6, 4);
+          ctx.fillStyle = blade;
+          ctx.beginPath();
+          ctx.moveTo(-3, -2); ctx.lineTo(10, -3);
+          ctx.quadraticCurveTo(13, 0, 10, 3);
+          ctx.lineTo(-3, 2); ctx.closePath(); ctx.fill();
+        } else if (sh === '枪') {
+          ctx.strokeStyle = metal; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(5, 0); ctx.stroke();
+          ctx.fillStyle = blade;
+          ctx.beginPath(); ctx.moveTo(5, -3); ctx.lineTo(13, 0); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
+        } else if (sh === '弓') {
+          ctx.strokeStyle = metal; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(7, 0); ctx.stroke();
+          ctx.fillStyle = blade;
+          ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(5, -4); ctx.lineTo(5, 4); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = '#8a6a10'; ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-10, 0); ctx.lineTo(-13, -3);
+          ctx.moveTo(-10, 0); ctx.lineTo(-13, 3);
+          ctx.stroke();
+        } else if (sh === '骑') {
+          ctx.fillStyle = metal;
+          ctx.fillRect(-9, -2, 5, 4);
+          ctx.fillRect(-5, -4, 2, 8);
+          ctx.fillStyle = blade;
+          ctx.beginPath(); ctx.moveTo(-3, -2); ctx.lineTo(11, 0); ctx.lineTo(-3, 2); ctx.closePath(); ctx.fill();
+        } else {
+          ctx.fillStyle = isGold ? '#b8860b' : '#3a3126';
+          ctx.beginPath(); ctx.arc(0, 0, isGold ? 6 : 4.5, 0, Math.PI * 2); ctx.fill();
+        }
       }
       ctx.restore();
     }

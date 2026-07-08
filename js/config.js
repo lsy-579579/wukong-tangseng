@@ -29,13 +29,17 @@
   };
   C.FRAG_CHARS = ['悟', '空', '八', '戒', '沙', '僧', '唐', '三', '白', '龙'];
 
+  // 武将基础数值（已下调，需配武器才能恢复强度）
+  // 未装备武器时只有基础攻击；装备武器后伤害+武器加成，攻击特效变为武器造型
   C.GENERALS = {
-    '悟空': { dmg: 150, itv: 0.7,  range: 3.6, skill: 'pierce',  desc: '如意棒·贯穿直线' },
-    '八戒': { dmg: 120, itv: 1.2,  range: 1.8, skill: 'stun',    desc: '九齿钯·范围眩晕' },
-    '沙僧': { dmg: 260, itv: 1.3,  range: 2.2, skill: 'execute', desc: '降妖杖·斩杀残敌' },
-    '唐三': { dmg: 85,  itv: 0.38, range: 4.5, skill: 'snipe',   desc: '紧箍咒·速射' },
-    '白龙': { dmg: 60,  itv: 1.0,  range: 2.6, skill: 'aura',    desc: '龙息·友军攻击+20%' }
+    '悟空': { dmg: 90,  itv: 0.7,  range: 3.6, skill: 'pierce',  desc: '如意棒·贯穿直线' },
+    '八戒': { dmg: 72,  itv: 1.2,  range: 1.8, skill: 'stun',    desc: '九齿钯·范围眩晕' },
+    '沙僧': { dmg: 156, itv: 1.3,  range: 2.2, skill: 'execute', desc: '降妖杖·斩杀残敌' },
+    '唐三': { dmg: 51,  itv: 0.38, range: 4.5, skill: 'snipe',   desc: '紧箍咒·速射' },
+    '白龙': { dmg: 36,  itv: 1.0,  range: 2.6, skill: 'aura',    desc: '龙息·友军攻击+20%' }
   };
+  // 5位主角名（用于武器装备绑定）
+  C.GENERAL_NAMES = ['悟空', '八戒', '沙僧', '唐三', '白龙'];
 
   // 征兵抽取权重（每次征兵直接替换整个备战席为5张随机卡牌，原版机制）
   // 调优：铲子对 AI 无价值且稀释产出，权重 8→4；碎片合成率过低，22→26
@@ -73,6 +77,55 @@
   C.AVATARS = ['wukong', 'bajie', 'shaseng', 'tangsan', 'bailong'];
   C.AVATAR_LABELS = { wukong: '悟空', bajie: '八戒', shaseng: '沙僧', tangsan: '唐三', bailong: '白龙' };
   C.AVATAR_DEFAULT = 'wukong';
+
+  // ============ 武器系统 ============
+  // 4品质 × 5件 = 20件武器
+  // 品质色 + 掉落概率 + 合成所需碎片数
+  C.WEAPON_QUALITY = {
+    green:  { name: '凡品', color: '#5aa860', drop: 0.10, fragNeed: 0 }, // 绿色成品直接掉落
+    blue:   { name: '良品', color: '#4a8ad4', drop: 0.05, fragNeed: 0 }, // 蓝色成品直接掉落
+    purple: { name: '珍品', color: '#a85ef0', drop: 0.02, fragNeed: 3 }, // 紫色3碎片合成
+    orange: { name: '神器', color: '#e8a23a', drop: 0.01, fragNeed: 5 }  // 橙色5碎片合成
+  };
+  C.WEAPON_QUALITY_ORDER = ['green', 'blue', 'purple', 'orange'];
+
+  // 武器列表：每件武器有 id/name/quality/owner(可选,角色名)/dmg(加成)/shape(弹道造型)
+  // 橙色5件：5位主角专属神器
+  // 紫色5件：西游经典法宝
+  // 蓝色5件：精良兵器
+  // 绿色5件：凡间兵器
+  C.WEAPONS = [
+    // ===== 橙色神器（5件，主角专属，5碎片合成） =====
+    { id: 'dinghai',   name: '定海神针', quality: 'orange', owner: '悟空', dmg: 90, shape: 'staff',  desc: '如意金箍棒·一万三千五百斤' },
+    { id: 'dingba',    name: '九齿钉耙', quality: 'orange', owner: '八戒', dmg: 80, shape: 'rake',   desc: '上宝沁金耙·天庭御赐' },
+    { id: 'jiangyao',  name: '降妖宝杖', quality: 'orange', owner: '沙僧', dmg: 130, shape: 'monkspade', desc: '降妖真宝杖·月宫梭罗' },
+    { id: 'xizhang',   name: '九环锡杖', quality: 'orange', owner: '唐三', dmg: 50, shape: 'crosier', desc: '唐王所赐·化缘专用' },
+    { id: 'longzhu',   name: '渊海明珠', quality: 'orange', owner: '白龙', dmg: 40, shape: 'pearl',  desc: '西海龙宫·夜明珠' },
+
+    // ===== 紫色珍品（5件，通用法宝，3碎片合成） =====
+    { id: 'bajiaoshan', name: '芭蕉扇',   quality: 'purple', dmg: 60, shape: 'fan',    desc: '铁扇公主·一扇熄火' },
+    { id: 'huluping',   name: '紫金葫芦', quality: 'purple', dmg: 55, shape: 'gourd',  desc: '金角大王·我叫你敢应吗' },
+    { id: 'qixingjian', name: '七星剑',   quality: 'purple', dmg: 65, shape: 'sword',  desc: '天庭神器·斩妖除魔' },
+    { id: 'jingping',   name: '羊脂玉净瓶', quality: 'purple', dmg: 50, shape: 'vase',  desc: '观音菩萨·净水甘霖' },
+    { id: 'huangjinrope', name: '幌金绳', quality: 'purple', dmg: 45, shape: 'rope',   desc: '九尾狐狸·捆仙索' },
+
+    // ===== 蓝色良品（5件，成品直接掉落） =====
+    { id: 'qingfeng',  name: '青锋剑',  quality: 'blue', dmg: 30, shape: 'sword', desc: '寒光凛凛·削铁如泥' },
+    { id: 'xuantie',   name: '玄铁盾',  quality: 'blue', dmg: 22, shape: 'shield', desc: '坚不可摧·防御加成' },
+    { id: 'hanbing',   name: '寒冰刃',  quality: 'blue', dmg: 28, shape: 'knife', desc: '北冰寒铁·附带冰冻' },
+    { id: 'liehuo',    name: '烈火枪',  quality: 'blue', dmg: 32, shape: 'spear', desc: '南焰火精·灼烧敌军' },
+    { id: 'fenglei',   name: '风雷弓',  quality: 'blue', dmg: 24, shape: 'bow',   desc: '风雷相激·万里穿杨' },
+
+    // ===== 绿色凡品（5件，成品直接掉落） =====
+    { id: 'liumu',     name: '柳木剑',  quality: 'green', dmg: 12, shape: 'sword', desc: '乡野常见·聊胜于无' },
+    { id: 'zhujie',    name: '竹节鞭',  quality: 'green', dmg: 14, shape: 'whip',  desc: '竹节所制·灵活轻便' },
+    { id: 'tiegong',   name: '铁背弓',  quality: 'green', dmg: 10, shape: 'bow',   desc: '猎户标配·精度尚可' },
+    { id: 'mutong',    name: '木铜盾',  quality: 'green', dmg: 8,  shape: 'shield', desc: '包铜木盾·抵御流矢' },
+    { id: 'shifu',     name: '石斧',    quality: 'green', dmg: 16, shape: 'axe',   desc: '粗石打磨·力大无穷' }
+  ];
+  // 按 id 索引方便查询
+  C.WEAPON_MAP = {};
+  C.WEAPONS.forEach(function (w) { C.WEAPON_MAP[w.id] = w; });
 
   // 玩家段位（11 级）：每级 5 阶（一~五），每阶满 5 星后再通关一次升下一阶
   C.RANKS = [

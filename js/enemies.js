@@ -148,6 +148,19 @@
       ZY.Battle.fx('text', e.x, e.y - 30, '+' + e.mantou, '#7a6428');
     }
     ZY.Battle.fx('ink', e.x, e.y);
+    // 领主击杀：玩家侧触发武器掉落
+    if (e.boss && e.side === 'p' && ZY.Weapon) {
+      var drop = ZY.Weapon.rollDrop();
+      if (drop) {
+        var w = C.WEAPON_MAP[drop.wid];
+        var qCfg = C.WEAPON_QUALITY[w.quality];
+        var msg = (drop.type === 'frag' ? '碎片·' : '') + w.name + '！';
+        ZY.Battle.fx('text', e.x, e.y - 60, msg, qCfg.color);
+        // 存入待结算列表，对局结束后再次提示
+        G.drops = G.drops || [];
+        G.drops.push({ wid: drop.wid, type: drop.type });
+      }
+    }
   };
 
   E.damage = function (e, dmg, opt) {

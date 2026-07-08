@@ -86,6 +86,7 @@ loadFile('board.js');
 loadFile('enemies.js');
 loadFile('battle.js');
 loadFile('ai.js');
+loadFile('weapon.js');
 loadFile('ui.js');
 loadFile('main.js');
 
